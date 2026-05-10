@@ -1,6 +1,6 @@
 # NameTag Package A
 
-Version: v0.0.1
+Version: v0.0.2
 
 네임텍(NameTag) 패키지 A는 초기 스타트업 및 1인 기업을 위한 AI 브랜드 정체성 설계 Streamlit MVP입니다.
 
@@ -65,7 +65,7 @@ pip install -r requirements.txt
 
 ```env
 GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL=gemini-1.5-pro
+GEMINI_MODEL=gemini-3-flash-preview
 ```
 
 ## 실행
