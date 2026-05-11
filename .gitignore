@@ -4,17 +4,45 @@ __pycache__/
 *.pyo
 *.pyd
 *.so
+*.egg-info/
 
 # Virtual environment
 .venv/
 venv/
+backend/venv/
 
-# Streamlit
-.streamlit/
+# Node.js
+node_modules/
+frontend/node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+frontend/dist/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.pytest_cache/
+.vite/
+
+# Development
+.devcontainer/
