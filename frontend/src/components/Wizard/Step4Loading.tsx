@@ -1,6 +1,6 @@
 import React from "react";
 import { useWizard } from "../../hooks/useWizard";
-import { Loader2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export function Step4Loading() {
   const { currentStep } = useWizard();
@@ -23,23 +23,46 @@ export function Step4Loading() {
 
   return (
     <div className="flex flex-col items-center justify-center py-20 space-y-8">
-      <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-      <div className="text-center space-y-2">
-        <p className="text-lg font-semibold text-gray-900">
+      {/* Animated Spinner */}
+      <div className="relative w-16 h-16">
+        <div className="spinner" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Sparkles size={24} className="text-neon-cyan animate-pulse" />
+        </div>
+      </div>
+
+      {/* Loading Info */}
+      <div className="text-center space-y-3">
+        <p className="text-lg font-semibold bg-gradient-neon bg-clip-text text-transparent animate-pulse">
           {steps[currentLoadingStep]}
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-light-text/60 dark:text-dark-text/60">
           예상 소요 시간: 10~15초
         </p>
       </div>
 
-      <div className="w-full max-w-xs bg-gray-100 rounded-full h-2">
+      {/* Progress Bar */}
+      <div className="w-full max-w-xs progress-bar">
         <div
-          className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+          className="progress-fill"
           style={{
             width: `${((currentLoadingStep + 1) / steps.length) * 100}%`,
           }}
         />
+      </div>
+
+      {/* Step Indicators */}
+      <div className="flex gap-2 mt-4">
+        {steps.map((_, index) => (
+          <div
+            key={index}
+            className={`h-1 rounded-full transition-all ${
+              index <= currentLoadingStep
+                ? "bg-gradient-neon w-8"
+                : "bg-light-border dark:bg-dark-border w-2"
+            }`}
+          />
+        ))}
       </div>
     </div>
   );

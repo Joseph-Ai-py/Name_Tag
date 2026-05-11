@@ -36,45 +36,51 @@ export function Step2Vibe() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-3xl font-bold text-light-text dark:text-dark-text mb-3">
           브랜드 감성을 선택해주세요
         </h2>
-        <p className="text-gray-600">최대 4개까지 선택 가능합니다</p>
+        <p className="text-light-text/70 dark:text-dark-text/70 text-base">
+          최대 4개까지 선택 가능합니다
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {VIBES.map((vibe) => (
-          <button
-            key={vibe}
-            onClick={() => toggleVibe(vibe)}
-            className={`px-4 py-3 rounded-lg font-medium transition ${
-              selectedVibes.includes(vibe)
-                ? "bg-blue-600 text-white ring-2 ring-blue-400"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {vibe}
-          </button>
-        ))}
-      </div>
+      <div className="floating-card p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {VIBES.map((vibe) => (
+            <button
+              key={vibe}
+              onClick={() => toggleVibe(vibe)}
+              className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                selectedVibes.includes(vibe)
+                  ? "bg-gradient-neon text-white shadow-glow-cyan"
+                  : "bg-light-border dark:bg-dark-border/50 text-light-text dark:text-dark-text hover:bg-light-border/80 dark:hover:bg-dark-border"
+              }`}
+            >
+              {vibe}
+            </button>
+          ))}
+        </div>
 
-      <p className="text-sm text-gray-600">
-        선택됨: {selectedVibes.length} / 4
-      </p>
+        <p className="mt-6 text-sm text-light-text/60 dark:text-dark-text/60 font-medium">
+          선택됨: <span className="text-neon-purple dark:text-neon-cyan">{selectedVibes.length}</span> / 4
+        </p>
+      </div>
 
       <div className="flex gap-3">
         <button
           onClick={handleBack}
-          className="flex-1 py-3 px-4 bg-gray-200 text-gray-900 font-semibold rounded-lg hover:bg-gray-300 transition"
+          className="flex-1 btn-secondary"
         >
           ← 이전
         </button>
         <button
           onClick={handleNext}
           disabled={!canProceedStep2}
-          className="flex-1 py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          className={`flex-1 btn-primary ${
+            !canProceedStep2 ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
-          다음 →
+          다음으로 (Step 3/5) →
         </button>
       </div>
     </div>

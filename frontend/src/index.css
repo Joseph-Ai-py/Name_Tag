@@ -1,11 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Light Mode (기본값) */
 html {
   @apply scroll-smooth;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-gradient-to-br from-blue-50 to-indigo-50;
+  @apply bg-gradient-light-bg text-light-text;
+}
+
+/* Dark Mode */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  @apply bg-gradient-dark-bg text-dark-text;
+}
+
+/* ========== Global Components ========== */
+
+/* Neon Gradient 애니메이션 */
+.gradient-neon {
+  background: linear-gradient(135deg, #00D9FF 0%, #0099FF 33%, #A855F7 66%, #EC4899 100%);
+  background-size: 300% 300%;
+  animation: gradient-flow 6s ease infinite;
+}
+
+/* Glow Effect (다크모드) */
+html.dark .glow-border {
+  @apply border border-neon-purple/30;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2), inset 0 0 20px rgba(0, 217, 255, 0.05);
+}
+
+/* Floating Card */
+.floating-card {
+  @apply rounded-2xl bg-white dark:bg-dark-bg2 shadow-soft dark:shadow-soft-dark;
+  transition: all 0.3s ease;
+}
+
+html.dark .floating-card {
+  @apply border border-dark-border/50;
+}
+
+.floating-card:hover {
+  @apply shadow-glow dark:shadow-glow-cyan;
+  transform: translateY(-2px);
+}
+
+/* Primary Button (Neon Gradient) */
+.btn-primary {
+  @apply bg-gradient-neon text-white font-semibold py-3 px-6 rounded-xl;
+  background-size: 200% 200%;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+.btn-primary:hover {
+  @apply shadow-glow;
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  @apply bg-light-border dark:bg-dark-border text-light-text dark:text-dark-text py-3 px-6 rounded-xl font-medium;
+  transition: all 0.3s ease;
+}
+
+html.dark .btn-secondary {
+  @apply border border-dark-border/50 hover:border-neon-purple/50;
+}
+
+.btn-secondary:hover {
+  @apply shadow-soft dark:shadow-soft-dark;
+  transform: translateY(-2px);
+}
+
+/* Input Field */
+.input-field {
+  @apply w-full px-4 py-3 rounded-xl border-2 border-light-border bg-white text-light-text;
+  @apply focus:outline-none focus:border-neon-cyan focus:shadow-soft;
+  transition: all 0.3s ease;
+}
+
+html.dark .input-field {
+  @apply bg-dark-bg2 border-dark-border text-dark-text;
+  @apply focus:border-neon-purple focus:shadow-soft-dark;
+}
+
+/* Progress Bar */
+.progress-bar {
+  @apply h-2 rounded-full bg-light-border dark:bg-dark-border overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-gradient-neon rounded-full;
+  background-size: 200% 200%;
+  animation: gradient-flow 4s ease infinite;
+  transition: width 0.5s ease;
+}
+
+/* Badge/Tag */
+.badge {
+  @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium;
+  @apply bg-light-bg text-light-text dark:bg-dark-bg2 dark:text-neon-cyan;
+  @apply border border-light-border dark:border-neon-purple/30;
+  transition: all 0.3s ease;
+}
+
+.badge:hover {
+  @apply dark:border-neon-purple/60 dark:shadow-glow;
+}
+
+/* Loading Spinner */
+.spinner {
+  @apply w-8 h-8 rounded-full;
+  border: 3px solid rgba(168, 85, 247, 0.1);
+  border-top-color: #A855F7;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Smooth Transition */
+* {
+  @apply transition-colors duration-300;
 }

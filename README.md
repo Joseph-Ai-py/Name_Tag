@@ -4,6 +4,14 @@
 
 네임텍(NameTag)은 초기 스타트업 및 1인 기업을 위한 **AI 기반 브랜드 정체성 설계 플랫폼**입니다.
 
+## 🎨 브랜드 정체성
+
+NameTag는 **Fluid Kinetic UI** 디자인 철학으로 구성되어 있습니다:
+- **로고**: 역동적이고 현대적인 디자인 (`logo/logo_black.png`, `logo/logo_white.png`)
+- **색상**: Cyan (#00D9FF) → Purple (#A855F7) → Magenta (#EC4899) 네온 그라데이션
+- **폰트**: Pretendard (한글) + Inter (영문)
+- **다크모드**: 시스템 설정 기반 + 수동 토글 가능
+
 ## ✨ 주요 기능
 
 ✅ **브랜드 네이밍** - AI가 생성한 3가지 이름 제안  
@@ -39,6 +47,7 @@ Name_Tag/
 │   │   ├── types/              # TypeScript 타입 정의
 │   │   ├── App.tsx
 │   │   └── main.tsx
+│   ├── public/                 # 로고 및 정적 파일 (로고는 Docker에서 자동 복사)
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tailwind.config.ts
@@ -56,6 +65,10 @@ Name_Tag/
 │   ├── .env.example
 │   ├── Dockerfile
 │   └── README.md
+│
+├── logo/                        # 브랜드 로고
+│   ├── logo_black.png          # 검은색 로고
+│   └── logo_white.png          # 흰색 로고
 │
 ├── app.py                       # 기존 Streamlit (레거시)
 ├── docker-compose.yml           # 로컬 개발 + 배포
@@ -196,7 +209,7 @@ docker-compose down -v
 프로젝트 루트 폴더에 `.env` 파일을 생성하고 아래 내용을 입력합니다:
 
 ```env
-GEMINI_API_KEY=AIzaSyBCqHnmBmCmNKNxtimWLoWtS2w8esG_h1M
+GEMINI_API_KEY=your api key
 GEMINI_MODEL=gemini-3-flash-preview
 ```
 

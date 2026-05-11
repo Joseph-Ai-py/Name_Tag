@@ -1,6 +1,7 @@
 import React from "react";
 import { useWizard } from "../../hooks/useWizard";
 import { useGenerate } from "../../hooks/useGenerate";
+import { Zap } from "lucide-react";
 
 export function Step3Target() {
   const {
@@ -32,32 +33,32 @@ export function Step3Target() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-3xl font-bold text-light-text dark:text-dark-text mb-3">
           주요 타겟 고객은 누구인가요?
         </h2>
-        <p className="text-gray-600">
+        <p className="text-light-text/70 dark:text-dark-text/70 text-base">
           나이, 직업, 라이프스타일 등을 자유롭게 설명해주세요
         </p>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="p-4 bg-neon-magenta/10 border border-neon-magenta/30 rounded-xl">
+          <p className="text-sm text-neon-magenta font-medium">{error}</p>
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          타겟 고객 설명 *
+      <div className="floating-card p-6">
+        <label className="block text-sm font-semibold text-light-text dark:text-dark-text mb-3">
+          타겟 고객 설명 <span className="text-neon-magenta">*</span>
         </label>
         <textarea
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="예: 30대 직장 여성, 소소한 취미생활을 즐기고 자신만의 공간을 꾸미는 것에 관심 있는 분들"
           rows={6}
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none"
+          className="input-field resize-none"
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-light-text/50 dark:text-dark-text/50">
           {target.length} / 500글자
         </p>
       </div>
@@ -65,7 +66,7 @@ export function Step3Target() {
       <div className="flex gap-3">
         <button
           onClick={handleBack}
-          className="flex-1 py-3 px-4 bg-gray-200 text-gray-900 font-semibold rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
+          className="flex-1 btn-secondary"
           disabled={generateMutation.isPending}
         >
           ← 이전
@@ -73,9 +74,14 @@ export function Step3Target() {
         <button
           onClick={handleGenerate}
           disabled={!canProceedStep3 || generateMutation.isPending}
-          className="flex-1 py-3 px-4 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          className={`flex-1 btn-primary flex items-center justify-center gap-2 ${
+            !canProceedStep3 || generateMutation.isPending
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
         >
-          {generateMutation.isPending ? "생성 중..." : "✦ 브랜드 생성"}
+          <Zap size={18} />
+          {generateMutation.isPending ? "생성 중..." : "브랜드 생성"}
         </button>
       </div>
     </div>

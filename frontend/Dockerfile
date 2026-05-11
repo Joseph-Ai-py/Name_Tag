@@ -2,6 +2,9 @@ FROM node:20-alpine as builder
 
 WORKDIR /app
 
+# Copy logo files to public
+COPY logo/ ./public/
+
 # Copy frontend
 COPY frontend/package*.json ./
 RUN npm ci
