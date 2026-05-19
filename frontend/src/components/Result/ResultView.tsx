@@ -24,16 +24,16 @@ export function ResultView() {
 
   const brands = result.brands;
   const selectedBrand = brands[selectedBrandIndex];
-  const logoDesign = selectedBrand.logo_design;
+  const logoDesign = selectedBrand.logo_design[0];
   const generatedLogo = generatedLogos[selectedBrandIndex];
 
   const handleGenerateCharacter = async () => {
     setIsGeneratingCharacter(true);
     try {
       const data = await generateCharacter({
-        character_name: selectedBrand.character.name,
-        character_concept: selectedBrand.character.concept,
-        character_visual: selectedBrand.character.visual,
+        character_name: selectedBrand.character[0].name,
+        character_concept: selectedBrand.character[0].concept,
+        character_visual: selectedBrand.character[0].visual,
         vibes: [],
       });
       setCharacterImage(`data:image/png;base64,${data.image}`);
@@ -240,7 +240,7 @@ export function ResultView() {
           <div className="floating-card p-6">
             <p className="text-sm font-semibold text-neon-cyan mb-3">한글</p>
             <p className="text-4xl font-bold text-light-text dark:text-dark-text font-serif">
-              {selectedBrand.typography.korean}
+              {selectedBrand.typography[0].korean}
             </p>
           </div>
           <div className="floating-card p-6">
@@ -248,14 +248,14 @@ export function ResultView() {
               English
             </p>
             <p className="text-4xl font-bold text-light-text dark:text-dark-text">
-              {selectedBrand.typography.english}
+              {selectedBrand.typography[0].english}
             </p>
           </div>
         </div>
         <div className="floating-card p-6 mt-6">
           <p className="text-sm font-semibold text-neon-green mb-3">💡 선택 이유</p>
           <p className="text-light-text/80 dark:text-dark-text/80 leading-relaxed">
-            {selectedBrand.typography.reason}
+            {selectedBrand.typography[0].reason}
           </p>
         </div>
       </div>
@@ -267,7 +267,7 @@ export function ResultView() {
         </h2>
         <div className="floating-card p-8">
           <h3 className="text-4xl font-bold bg-gradient-neon bg-clip-text text-transparent mb-4">
-            {selectedBrand.character.name}
+            {selectedBrand.character[0].name}
           </h3>
 
           <div className="space-y-4">
@@ -276,7 +276,7 @@ export function ResultView() {
                 컨셉
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {selectedBrand.character.concept}
+                {selectedBrand.character[0].concept}
               </p>
             </div>
 
@@ -287,7 +287,7 @@ export function ResultView() {
                 성격 & 특징
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {selectedBrand.character.personality}
+                {selectedBrand.character[0].personality}
               </p>
             </div>
 
@@ -298,7 +298,7 @@ export function ResultView() {
                 시각적 표현
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {selectedBrand.character.visual}
+                {selectedBrand.character[0].visual}
               </p>
             </div>
           </div>

@@ -205,7 +205,7 @@ with st.sidebar:
             
             # 선택된 브랜드의 logo_design 정보 표시 및 편집
             selected_brand = brands[selected_brand_idx]
-            logo_design = selected_brand.get("logo_design", {})
+            logo_design = selected_brand.get("logo_design", [{}])[0]
             
             if logo_design:
                 st.markdown(f"#### {selected_brand.get('name')}")
@@ -378,13 +378,13 @@ elif st.session_state.step == 5:
                     # 우측: 디자인 정보
                     with col2:
                         st.markdown("#### 🔤 타이포그래피")
-                        typography = brand.get("typography", {})
+                        typography = brand.get("typography", [{}])[0]
                         st.write(f"**한글**: {typography.get('korean')}")
                         st.write(f"**영문**: {typography.get('english')}")
                         st.caption(typography.get('reason'))
                         
-                        st.markdown("#### 🎭 캐릭터")
-                        character = brand.get("character", {})
+                        st.markdown("#### 🌞 캠릭터")
+                        character = brand.get("character", [{}])[0]
                         st.write(f"**이름**: {character.get('name')}")
                         st.write(f"**컨셉**: {character.get('concept')}")
                         st.write(f"**성격**: {character.get('personality')}")
@@ -394,7 +394,7 @@ elif st.session_state.step == 5:
                     
                     # 로고 디자인 정보
                     st.markdown("#### 🎨 로고 디자인 (권장)")
-                    logo_design = brand.get("logo_design", {})
+                    logo_design = brand.get("logo_design", [{}])[0]
                     
                     if logo_design:
                         # 실시간으로 수정된 값을 표시

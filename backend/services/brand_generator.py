@@ -51,30 +51,84 @@ def build_user_prompt(business_type: str, vibes: list[str], target: str, keyword
     {{ "name": "두번째 브랜드명", "meaning": "...", "story": "...", "slogan": "..." }},
     {{ "name": "세번째 브랜드명", "meaning": "...", "story": "...", "slogan": "..." }}
   ],
-  "typography": {{
-    "korean": "추천 한글 폰트명 (나눔명조, 프리텐다드, 고도체 등)",
-    "english": "추천 영문 폰트명 (Playfair Display, DM Sans 등)",
-    "reason": "선택 이유 2문장"
-  }},
-  "character": {{
-    "name": "캐릭터 이름",
-    "concept": "컨셉 한 줄",
-    "personality": "성격 특징 3가지, 쉼표로 구분",
-    "visual": "외형 묘사 2-3문장"
-  }},
-"logo_design": {{
-    "brand_name": "브랜드/서비스 이름",
-    "brand_topic": "사업 주제 또는 업종",
-    "core_value": "브랜드가 전달하고 싶은 핵심 가치 1~2개",
-    "target_mood": "원하는 브랜드 감성 (예: 모던하고 혁신적인 기술)",
-    "symbol_type": "심볼 스타일 선호도 (예: 기하학적 수렴 다이어그램)",
-    "font_style": "서체 느낌 선호도 (예: 산세리프)",
-    "font_reference": "참고할 폰트 레퍼런스 (예: Helvetica Neue)",
-    "font_weight": "폰트 굵기 (예: bold)",
-    "brand_color": "로고/브랜드 메인 색상 (예: 흰색)",
-    "logo_type": "로고 구성 방식 (예: 심볼+텍스트 조합)",
-    "background": "로고 배경 색상 (예: 검은색)"
-  }}
+  "typography": [
+    {{
+      "korean": "추천 한글 폰트명 (나눔명조, 프리텐다드, 고도체 등)",
+      "english": "추천 영문 폰트명 (Playfair Display, DM Sans 등)",
+      "reason": "선택 이유 2문장"
+    }},
+    {{
+      "korean": "두번째 한글 폰트명",
+      "english": "두번째 영문 폰트명",
+      "reason": "두번째 선택 이유 2문장"
+    }},
+    {{
+      "korean": "세번째 한글 폰트명",
+      "english": "세번째 영문 폰트명",
+      "reason": "세번째 선택 이유 2문장"
+    }}
+  ],
+  "character": [
+    {{
+      "name": "캐릭터 이름",
+      "concept": "컨셉 한 줄",
+      "personality": "성격 특징 3가지, 쉼표로 구분",
+      "visual": "외형 묘사 2-3문장"
+    }},
+    {{
+      "name": "두번째 캐릭터 이름",
+      "concept": "두번째 컨셉 한 줄",
+      "personality": "두번째 성격 특징 3가지, 쉼표로 구분",
+      "visual": "두번째 외형 묘사 2-3문장"
+    }},
+    {{
+      "name": "세번째 캐릭터 이름",
+      "concept": "세번째 컨셉 한 줄",
+      "personality": "세번째 성격 특징 3가지, 쉼표로 구분",
+      "visual": "세번째 외형 묘사 2-3문장"
+    }}
+  ],
+  "logo_design": [
+    {{
+      "brand_name": "브랜드/서비스 이름",
+      "brand_topic": "사업 주제 또는 업종",
+      "core_value": "브랜드가 전달하고 싶은 핵심 가치 1~2개",
+      "target_mood": "원하는 브랜드 감성 (예: 모던하고 혁신적인 기술)",
+      "symbol_type": "심볼 스타일 선호도 (예: 기하학적 수렴 다이어그램)",
+      "font_style": "서체 느낌 선호도 (예: 산세리프)",
+      "font_reference": "참고할 폰트 레퍼런스 (예: Helvetica Neue)",
+      "font_weight": "폰트 굵기 (예: bold)",
+      "brand_color": "로고/브랜드 메인 색상 (예: 흰색)",
+      "logo_type": "로고 구성 방식 (예: 심볼+텍스트 조합)",
+      "background": "로고 배경 색상 (예: 검은색)"
+    }},
+    {{
+      "brand_name": "두번째 브랜드명",
+      "brand_topic": "두번째 사업 주제",
+      "core_value": "두번째 핵심 가치",
+      "target_mood": "두번째 브랜드 감성",
+      "symbol_type": "두번째 심볼 스타일",
+      "font_style": "두번째 서체 느낌",
+      "font_reference": "두번째 폰트 레퍼런스",
+      "font_weight": "두번째 폰트 굵기",
+      "brand_color": "두번째 브랜드 색상",
+      "logo_type": "두번째 로고 구성",
+      "background": "두번째 배경 색상"
+    }},
+    {{
+      "brand_name": "세번째 브랜드명",
+      "brand_topic": "세번째 사업 주제",
+      "core_value": "세번째 핵심 가치",
+      "target_mood": "세번째 브랜드 감성",
+      "symbol_type": "세번째 심볼 스타일",
+      "font_style": "세번째 서체 느낌",
+      "font_reference": "세번째 폰트 레퍼런스",
+      "font_weight": "세번째 폰트 굵기",
+      "brand_color": "세번째 브랜드 색상",
+      "logo_type": "세번째 로고 구성",
+      "background": "세번째 배경 색상"
+    }}
+  ]
 }}"""
 
 
@@ -158,7 +212,7 @@ def generate_brand_identity(
     if result is None:
         raise ValueError(f"JSON 파싱 실패. 원본 응답:\n{raw_text[:500]}")
 
-    required_keys = {"brands", "typography", "character"}
+    required_keys = {"brands", "typography", "character", "logo_design"}
     if not required_keys.issubset(result.keys()):
         missing = required_keys - set(result.keys())
         raise ValueError(f"응답에 필수 키가 없습니다: {missing}")
@@ -179,24 +233,46 @@ def generate_brand_identity(
     
     if result.get("typography"):
         logger.info("🔤 TYPOGRAPHY (타이포그래피):")
-        typography = result["typography"]
-        logger.info(f"  Korean Font: {typography.get('korean')}")
-        logger.info(f"  English Font: {typography.get('english')}")
-        logger.info(f"  Reason: {typography.get('reason')}")
+        typographies = result["typography"]
+        # Handle both array and single object for backward compatibility
+        if isinstance(typographies, list):
+            for i, typography in enumerate(typographies, 1):
+                logger.info(f"  [{i}] Korean Font: {typography.get('korean')}")
+                logger.info(f"       English Font: {typography.get('english')}")
+                logger.info(f"       Reason: {typography.get('reason')}")
+        else:
+            logger.info(f"  Korean Font: {typographies.get('korean')}")
+            logger.info(f"  English Font: {typographies.get('english')}")
+            logger.info(f"  Reason: {typographies.get('reason')}")
     
     if result.get("character"):
         logger.info("🎭 CHARACTER (캐릭터):")
-        character = result["character"]
-        logger.info(f"  Name: {character.get('name')}")
-        logger.info(f"  Concept: {character.get('concept')}")
-        logger.info(f"  Personality: {character.get('personality')}")
-        logger.info(f"  Visual: {character.get('visual')}")
+        characters = result["character"]
+        # Handle both array and single object for backward compatibility
+        if isinstance(characters, list):
+            for i, character in enumerate(characters, 1):
+                logger.info(f"  [{i}] Name: {character.get('name')}")
+                logger.info(f"       Concept: {character.get('concept')}")
+                logger.info(f"       Personality: {character.get('personality')}")
+                logger.info(f"       Visual: {character.get('visual')}")
+        else:
+            logger.info(f"  Name: {characters.get('name')}")
+            logger.info(f"  Concept: {characters.get('concept')}")
+            logger.info(f"  Personality: {characters.get('personality')}")
+            logger.info(f"  Visual: {characters.get('visual')}")
     
     if result.get("logo_design"):
         logger.info("🎨 LOGO DESIGN (로고 설계):")
-        logo = result["logo_design"]
-        for key, value in logo.items():
-            logger.info(f"  {key}: {value}")
+        logo_designs = result["logo_design"]
+        # Handle both array and single object for backward compatibility
+        if isinstance(logo_designs, list):
+            for i, logo in enumerate(logo_designs, 1):
+                logger.info(f"  [{i}]")
+                for key, value in logo.items():
+                    logger.info(f"      {key}: {value}")
+        else:
+            for key, value in logo_designs.items():
+                logger.info(f"  {key}: {value}")
     
     logger.info("=" * 80)
 
