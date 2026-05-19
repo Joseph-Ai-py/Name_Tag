@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useWizard } from "../../hooks/useWizard";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, RotateCcw, Wand2, Loader } from "lucide-react";
+import { generateCharacter } from "../../lib/api";
+import { useGenerationStore } from "../../stores/generationStore";
 
 export function ResultView() {
   const {
@@ -10,12 +12,48 @@ export function ResultView() {
     reset,
   } = useWizard();
 
+  const {
+    images,
+    setCharacterImage,
+    setIsGeneratingCharacter,
+    generatedLogos,
+    setGeneratedLogo,
+  } = useGenerationStore();
+
   if (!result) return null;
 
   const brands = result.brands;
   const selectedBrand = brands[selectedBrandIndex];
-  const typography = result.typography;
-  const character = result.character;
+  const logoDesign = selectedBrand.logo_design;
+  const generatedLogo = generatedLogos[selectedBrandIndex];
+
+  const handleGenerateCharacter = async () => {
+    setIsGeneratingCharacter(true);
+    try {
+      const data = await generateCharacter({
+        character_name: selectedBrand.character.name,
+        character_concept: selectedBrand.character.concept,
+        character_visual: selectedBrand.character.visual,
+        vibes: [],
+      });
+      setCharacterImage(`data:image/png;base64,${data.image}`);
+    } catch (error) {
+      alert("캐릭터 생성에 실패했습니다. 다시 시도해주세요.");
+      console.error(error);
+    } finally {
+      setIsGeneratingCharacter(false);
+    }
+  };
+
+  const handleDownloadLogo = () => {
+    if (!generatedLogo?.image) return;
+    const link = document.createElement("a");
+    link.href = generatedLogo.image;
+    link.download = generatedLogo.filename || "logo.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-8">
@@ -67,6 +105,132 @@ export function ResultView() {
         </div>
       </div>
 
+      {/* Logo Generation Section */}
+      <div>
+        <h2 className="text-3xl font-bold text-light-text dark:text-dark-text mb-6">
+          🎨 로고 디자인 정보
+        </h2>
+        <div className="floating-card p-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                브랜드 이름
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.brand_name}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                사업 주제
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.brand_topic}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                핵심 가치
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.core_value}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                타겟 감성
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.target_mood}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                서체 스타일
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.font_style}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                서체 참고
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.font_reference}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                심볼 스타일
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.symbol_type}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                서체 굵기
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.font_weight}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                로고 유형
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.logo_type}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                배경
+              </p>
+              <p className="font-semibold text-light-text dark:text-dark-text truncate">
+                {logoDesign.background}
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-light-border/50 dark:bg-dark-border/50">
+              <p className="text-xs text-light-text/60 dark:text-dark-text/60 mb-1">
+                브랜드 색상
+              </p>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-6 h-6 rounded border border-light-border/50"
+                  style={{ backgroundColor: logoDesign.brand_color }}
+                />
+                <p className="font-mono text-sm text-light-text dark:text-dark-text">
+                  {logoDesign.brand_color}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {generatedLogo?.image ? (
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src={generatedLogo.image}
+                alt="Generated Logo"
+                className="max-w-sm max-h-96 rounded-lg border-2 border-neon-cyan/30"
+              />
+              <button
+                onClick={handleDownloadLogo}
+                className="btn-primary flex items-center justify-center gap-2"
+              >
+                <Download size={18} />
+                로고 다운로드
+              </button>
+            </div>
+          ) : (
+            <p className="text-center text-light-text/60 dark:text-dark-text/60 py-8">
+              사이드바에서 "🎨 로고 이미지 생성"을 클릭하여 로고를 생성하세요
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Typography Section */}
       <div>
         <h2 className="text-3xl font-bold text-light-text dark:text-dark-text mb-6">
@@ -76,7 +240,7 @@ export function ResultView() {
           <div className="floating-card p-6">
             <p className="text-sm font-semibold text-neon-cyan mb-3">한글</p>
             <p className="text-4xl font-bold text-light-text dark:text-dark-text font-serif">
-              {typography.korean}
+              {selectedBrand.typography.korean}
             </p>
           </div>
           <div className="floating-card p-6">
@@ -84,14 +248,14 @@ export function ResultView() {
               English
             </p>
             <p className="text-4xl font-bold text-light-text dark:text-dark-text">
-              {typography.english}
+              {selectedBrand.typography.english}
             </p>
           </div>
         </div>
         <div className="floating-card p-6 mt-6">
           <p className="text-sm font-semibold text-neon-green mb-3">💡 선택 이유</p>
           <p className="text-light-text/80 dark:text-dark-text/80 leading-relaxed">
-            {typography.reason}
+            {selectedBrand.typography.reason}
           </p>
         </div>
       </div>
@@ -103,7 +267,7 @@ export function ResultView() {
         </h2>
         <div className="floating-card p-8">
           <h3 className="text-4xl font-bold bg-gradient-neon bg-clip-text text-transparent mb-4">
-            {character.name}
+            {selectedBrand.character.name}
           </h3>
 
           <div className="space-y-4">
@@ -112,7 +276,7 @@ export function ResultView() {
                 컨셉
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {character.concept}
+                {selectedBrand.character.concept}
               </p>
             </div>
 
@@ -123,7 +287,7 @@ export function ResultView() {
                 성격 & 특징
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {character.personality}
+                {selectedBrand.character.personality}
               </p>
             </div>
 
@@ -134,10 +298,63 @@ export function ResultView() {
                 시각적 표현
               </p>
               <p className="text-light-text/80 dark:text-dark-text/80">
-                {character.visual}
+                {selectedBrand.character.visual}
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Character Image Generation Section */}
+      <div>
+        <h2 className="text-3xl font-bold text-light-text dark:text-dark-text mb-6">
+          🤖 캐릭터 이미지
+        </h2>
+        <div className="floating-card p-8">
+          {images.characterImage ? (
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src={images.characterImage}
+                alt="Generated Character"
+                className="max-w-sm max-h-96 rounded-lg border-2 border-neon-magenta/30"
+              />
+              <button
+                onClick={handleGenerateCharacter}
+                disabled={images.isGeneratingCharacter}
+                className="btn-secondary flex items-center justify-center gap-2"
+              >
+                {images.isGeneratingCharacter ? (
+                  <>
+                    <Loader size={18} className="animate-spin" />
+                    생성 중...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={18} />
+                    다시 생성하기
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleGenerateCharacter}
+              disabled={images.isGeneratingCharacter}
+              className="w-full btn-primary flex items-center justify-center gap-2 py-6"
+            >
+              {images.isGeneratingCharacter ? (
+                <>
+                  <Loader size={18} className="animate-spin" />
+                  캐릭터 생성 중...
+                </>
+              ) : (
+                <>
+                  <Wand2 size={18} />
+                  AI로 캐릭터 생성하기
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

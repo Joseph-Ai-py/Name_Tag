@@ -46,3 +46,7 @@ Thumbs.db
 
 # Development
 .devcontainer/
+
+# Testing
+Test/
+Prompt/

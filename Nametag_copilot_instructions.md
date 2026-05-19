@@ -1,4 +1,4 @@
-# 네임텍(NameTag) 패키지 A — Streamlit MVP 코파일럿 지침
+# 네임텍(NameTag) 패키지 A — Streamlit MVP(V0.0.1) 코파일럿 지침
 
 ## 프로젝트 개요
 
