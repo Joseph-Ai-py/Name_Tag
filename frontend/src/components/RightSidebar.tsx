@@ -86,6 +86,10 @@ export function RightSidebar() {
       {/* 미리보기 탭 */}
       {activeTab === "preview" && (
         <div className="max-h-[600px] overflow-y-auto">
+          <div className="mb-4 flex items-center justify-center gap-3">
+            <img src="/logo/logo_onoff_20260531.png" alt="logo preview" className="h-16 w-auto rounded-md bg-white p-1 object-contain" />
+            <img src="/logo/char_onoff_20260531.png" alt="char preview" className="h-16 w-auto rounded-md bg-white p-1 object-contain" />
+          </div>
           {htmlPreview ? (
             <div
               className="rounded-xl border border-stone-200 bg-stone-50"
