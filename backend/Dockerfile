@@ -20,9 +20,6 @@ COPY backend/ .
 COPY utils/ /app/utils/
 COPY services/ /app/services/
 
-# Copy Prompt templates (needed for image generation)
-COPY Prompt/ ../Prompt/
-
 # Create logs directory
 RUN mkdir -p /logs
 

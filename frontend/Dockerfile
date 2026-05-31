@@ -2,8 +2,8 @@ FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Copy logo files to public
-COPY logo/ ./public/
+ARG VITE_API_URL=http://localhost:8000/api
+ENV VITE_API_URL=${VITE_API_URL}
 
 # Copy frontend
 COPY frontend/package*.json ./
