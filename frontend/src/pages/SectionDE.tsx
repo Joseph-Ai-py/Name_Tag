@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { generateSectionDE, getDEInterview } from "../api/client";
+import { apiLogger } from "../api/client";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageFrame } from "../components/PageFrame";
@@ -67,7 +68,9 @@ export function SectionDE() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section DE: interview request", { brandName: brandInfo.brand_name, interviewCLength: interviewDataC.length });
                 const response = await getDEInterview(brandInfo, interviewDataC);
+                apiLogger.info("Section DE: interview response", { questionCount: response.questions?.length ?? 0 });
                 setReasoning(response.reasoning || "");
                 setQuestions(response.questions || []);
               } catch (error) {
@@ -90,6 +93,14 @@ export function SectionDE() {
                 }
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section DE: generate request", {
+                  brandName: brandInfo.brand_name,
+                  dataCLength: Object.keys(dataC || {}).length,
+                  interviewALength: interviewDataA.length,
+                  interviewBLength: interviewDataB.length,
+                  interviewCLength: interviewDataC.length,
+                  interviewDELength: interviewDataDE.length,
+                });
                 const response = await generateSectionDE(
                   brandInfo,
                   dataC,
@@ -98,6 +109,11 @@ export function SectionDE() {
                   interviewDataC,
                   interviewDataDE,
                 );
+                apiLogger.info("Section DE: generate response", {
+                  logoPath: response.data_de?.logo_path,
+                  charPath: response.data_de?.char_path,
+                  keys: Object.keys(response.data_de || {}),
+                });
                 setDataDE(response.data_de || {});
               } catch (error) {
                 setError(error instanceof Error ? error.message : "Section DE 생성 실패");
@@ -114,7 +130,16 @@ export function SectionDE() {
         {isLoading && <LoadingSpinner label="D/E 섹션을 생성 중입니다..." />}
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        {questions.length > 0 && <InterviewCard questions={questions} reasoning={reasoning} onComplete={setInterviewDataDE} />}
+        {questions.length > 0 && (
+          <InterviewCard
+            questions={questions}
+            reasoning={reasoning}
+            onComplete={(formattedText) => {
+              apiLogger.info("Section DE: interview text stored", { length: formattedText.length });
+              setInterviewDataDE(formattedText);
+            }}
+          />
+        )}
 
         {dataDE && (
           <div className="grid gap-5 lg:grid-cols-2">

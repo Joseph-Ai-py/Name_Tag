@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Eye, SlidersHorizontal } from "lucide-react";
 import { Header } from "../components/Layout/Header";
 import { Footer } from "../components/Layout/Footer";
 import { ProgressBar } from "../components/Wizard/ProgressBar";
-import { RightSidebar } from "../components/RightSidebar";
+import { PdfPreviewSidebar } from "../components/PdfPreviewSidebar";
+import { PdfVariableSidebar } from "../components/PdfVariableSidebar";
 import { SectionA } from "./SectionA";
 import { SectionB } from "./SectionB";
 import { SectionC } from "./SectionC";
@@ -13,6 +15,7 @@ import { useBrandStore } from "../store/brandStore";
 
 export function Generate() {
   const currentStep = useBrandStore((state) => state.currentStep);
+  const [sidebarMode, setSidebarMode] = useState<"preview" | "variables">("preview");
   const steps = useMemo(
     () => [
       { label: "O", title: "브랜드 초안" },
@@ -67,7 +70,40 @@ export function Generate() {
           </div>
         </div>
 
-        {showSidebar && <RightSidebar />}
+        {showSidebar && (
+          <div className="hidden w-[22rem] shrink-0 flex-col gap-3 lg:flex">
+            <div className="rounded-3xl border border-stone-200 bg-white/85 p-2 shadow-[0_24px_70px_rgba(15,23,42,0.07)] backdrop-blur dark:border-dark-border dark:bg-dark-bg2/85">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSidebarMode("preview")}
+                  className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    sidebarMode === "preview"
+                      ? "bg-amber-500 text-white shadow-sm"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  }`}
+                >
+                  <Eye size={16} />
+                  미리보기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarMode("variables")}
+                  className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    sidebarMode === "variables"
+                      ? "bg-stone-900 text-white shadow-sm"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  }`}
+                >
+                  <SlidersHorizontal size={16} />
+                  변수 수정
+                </button>
+              </div>
+            </div>
+
+            {sidebarMode === "preview" ? <PdfPreviewSidebar /> : <PdfVariableSidebar />}
+          </div>
+        )}
       </main>
 
       <Footer />

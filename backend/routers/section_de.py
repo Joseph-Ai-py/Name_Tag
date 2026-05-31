@@ -49,9 +49,14 @@ async def generate_section_de(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
+        print(
+            f"[DEBUG] section-de generate start - brand={brand['brand_name']}, "
+            f"data_c_keys={list(req.data_c.keys())}, context_lengths={{'a': len(req.interview_data_a), 'b': len(req.interview_data_b), 'c': len(req.interview_data_c), 'de': len(req.interview_data_de)}}"
+        )
         result = request_gemini_text(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de)
         )
+        print(f"[DEBUG] section-de identity generated - keys={list(result.keys())}")
 
         logo_path = generate_logo_image(brand["brand_name"], result)
         char_path = generate_character_image(brand["brand_name"], result)
@@ -65,7 +70,12 @@ async def generate_section_de(req: DEGenerateRequest):
 
         result["logo_path"] = to_url_path(logo_path)
         result["char_path"] = to_url_path(char_path)
+        print(
+            f"[DEBUG] section-de generate done - brand={brand['brand_name']}, "
+            f"logo_path={result['logo_path']}, char_path={result['char_path']}"
+        )
 
         return {"data_de": result}
     except Exception as exc:
+        print(f"[DEBUG] section-de generate error - {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

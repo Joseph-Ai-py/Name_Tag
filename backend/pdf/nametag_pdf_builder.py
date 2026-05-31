@@ -201,35 +201,29 @@ def build_e_character_guide(data_E, char_image_path=None):
     """
 
 
+def _convert_web_path_to_file_path(web_path: str | None) -> str | None:
+    if not web_path:
+        return None
+
+    if web_path.startswith("/assets/"):
+        root = Path(__file__).resolve().parents[2]
+        return str(root / web_path.lstrip("/"))
+
+    return web_path
+
+
 def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=None):
     base = _load_base_module()
     base.build_d_logo_identity = build_d_logo_identity
     base.build_e_character_guide = build_e_character_guide
     
-    # 웹 경로를 파일 경로로 변환 (data_DE에 있는 이미지 경로)
+    # 웹 경로를 파일 경로로 변환해서 WeasyPrint가 실제 파일을 읽을 수 있게 만든다.
     if data_DE and isinstance(data_DE, dict):
-        def convert_web_path_to_file_path(web_path):
-            """웹 경로 (e.g., '/assets/...') 를 파일 시스템 경로로 변환"""
-            if not web_path or not web_path.startswith("/assets/"):
-                return web_path
-            
-            relative = web_path[1:]  # 앞의 / 제거
-            root = Path(__file__).resolve().parents[2]  # 프로젝트 루트
-            file_path = root / relative
-            return str(file_path)
-        
-        # 이미지 경로 변환
-        if "logo_path" in data_DE:
-            original_logo_path = data_DE.get("logo_path")
-            file_logo_path = convert_web_path_to_file_path(original_logo_path)
-            print(f"[DEBUG] assemble_html - logo_path: {original_logo_path} -> {file_logo_path}")
-            data_DE["_logo_file_path"] = file_logo_path
-        
-        if "char_path" in data_DE:
-            original_char_path = data_DE.get("char_path")
-            file_char_path = convert_web_path_to_file_path(original_char_path)
-            print(f"[DEBUG] assemble_html - char_path: {original_char_path} -> {file_char_path}")
-            data_DE["_char_file_path"] = file_char_path
+        logo_path = _convert_web_path_to_file_path(data_DE.get("logo_path"))
+        char_path = _convert_web_path_to_file_path(data_DE.get("char_path"))
+        data_DE = {**data_DE, "logo_path": logo_path, "char_path": char_path}
+        print(f"[DEBUG] assemble_html - logo_path resolved: {logo_path}")
+        print(f"[DEBUG] assemble_html - char_path resolved: {char_path}")
     
     # 원본 notebook_backend 함수 호출하되, 이미지 경로 주입
     html = base.assemble_html(brand_info, data_A, data_B, data_C, data_DE)

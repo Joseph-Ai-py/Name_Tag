@@ -1,7 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // 디버깅 로거
-const logger = {
+export const apiLogger = {
   info: (message: string, data?: unknown) => {
     console.log(`[NameTag API] ${message}`, data || "");
   },
@@ -16,7 +16,7 @@ const logger = {
 
 async function apiPost(endpoint: string, body: unknown) {
   const startTime = performance.now();
-  logger.info(`📤 POST ${endpoint}`, body);
+  apiLogger.info(`📤 POST ${endpoint}`, body);
 
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -27,47 +27,47 @@ async function apiPost(endpoint: string, body: unknown) {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      logger.error(`${endpoint} - Status ${response.status}`, payload);
+      apiLogger.error(`${endpoint} - Status ${response.status}`, payload);
       throw new Error(payload.detail || "서버 오류가 발생했습니다.");
     }
 
     const data = await response.json();
-    logger.timing(endpoint, startTime);
-    logger.info(`✅ ${endpoint} success`);
+    apiLogger.timing(endpoint, startTime);
+    apiLogger.info(`✅ ${endpoint} success`);
     return data;
   } catch (error) {
-    logger.error(`${endpoint} - Network or parse error`, error);
+    apiLogger.error(`${endpoint} - Network or parse error`, error);
     throw error;
   }
 }
 
 export const getOInterview = (brandData: unknown) => {
-  logger.info("🎯 Section O Interview 시작", { business_type: (brandData as any).business_type });
+  apiLogger.info("🎯 Section O Interview 시작", { business_type: (brandData as any).business_type, target: (brandData as any).target, vibes: (brandData as any).vibes?.length ?? 0 });
   return apiPost("/section-o/interview", { brand_data: brandData });
 };
 
 export const getOCandidates = (brandData: unknown, interviewData: string) => {
-  logger.info("🎯 Section O Candidates 생성", { interviewLength: interviewData.length });
+  apiLogger.info("🎯 Section O Candidates 생성", { interviewLength: interviewData.length });
   return apiPost("/section-o/candidates", { brand_data: brandData, interview_data: interviewData });
 };
 
 export const getAInterview = (brandInfo: unknown) => {
-  logger.info("🎯 Section A Interview 시작");
+  apiLogger.info("🎯 Section A Interview 시작", { brandName: (brandInfo as any)?.brand_name });
   return apiPost("/section-a/interview", { brand_info: brandInfo });
 };
 
 export const generateSectionA = (brandInfo: unknown, interviewDataA: string) => {
-  logger.info("🎯 Section A 데이터 생성", { interviewLength: interviewDataA.length });
+  apiLogger.info("🎯 Section A 데이터 생성", { brandName: (brandInfo as any)?.brand_name, interviewLength: interviewDataA.length });
   return apiPost("/section-a/generate", { brand_info: brandInfo, interview_data_a: interviewDataA });
 };
 
 export const getBInterview = (brandInfo: unknown) => {
-  logger.info("🎯 Section B Interview 시작");
+  apiLogger.info("🎯 Section B Interview 시작", { brandName: (brandInfo as any)?.brand_name });
   return apiPost("/section-b/interview", { brand_info: brandInfo });
 };
 
 export const generateSectionB = (brandInfo: unknown, interviewDataA: string, interviewDataB: string) => {
-  logger.info("🎯 Section B 데이터 생성", { interviewA: interviewDataA.length, interviewB: interviewDataB.length });
+  apiLogger.info("🎯 Section B 데이터 생성", { brandName: (brandInfo as any)?.brand_name, interviewA: interviewDataA.length, interviewB: interviewDataB.length });
   return apiPost("/section-b/generate", {
     brand_info: brandInfo,
     interview_data_a: interviewDataA,
@@ -76,12 +76,12 @@ export const generateSectionB = (brandInfo: unknown, interviewDataA: string, int
 };
 
 export const getCInterview = (brandInfo: unknown) => {
-  logger.info("🎯 Section C Interview 시작");
+  apiLogger.info("🎯 Section C Interview 시작", { brandName: (brandInfo as any)?.brand_name });
   return apiPost("/section-c/interview", { brand_info: brandInfo });
 };
 
 export const generateSectionC = (brandInfo: unknown, interviewDataA: string, interviewDataB: string, interviewDataC: string) => {
-  logger.info("🎯 Section C 데이터 생성", { interviewA: interviewDataA.length, interviewB: interviewDataB.length, interviewC: interviewDataC.length });
+  apiLogger.info("🎯 Section C 데이터 생성", { brandName: (brandInfo as any)?.brand_name, interviewA: interviewDataA.length, interviewB: interviewDataB.length, interviewC: interviewDataC.length });
   return apiPost("/section-c/generate", {
     brand_info: brandInfo,
     interview_data_a: interviewDataA,
@@ -91,7 +91,7 @@ export const generateSectionC = (brandInfo: unknown, interviewDataA: string, int
 };
 
 export const getDEInterview = (brandInfo: unknown, interviewDataC: string) => {
-  logger.info("🎯 Section DE Interview 시작", { interviewC: interviewDataC.length });
+  apiLogger.info("🎯 Section DE Interview 시작", { brandName: (brandInfo as any)?.brand_name, interviewC: interviewDataC.length });
   return apiPost("/section-de/interview", { brand_info: brandInfo, interview_data_c: interviewDataC });
 };
 
@@ -103,7 +103,8 @@ export const generateSectionDE = (
   interviewDataC: string,
   interviewDataDE: string,
 ) => {
-  logger.info("🎯 Section DE 데이터 생성 (이미지 포함)", { 
+  apiLogger.info("🎯 Section DE 데이터 생성 (이미지 포함)", { 
+    brandName: (brandInfo as any)?.brand_name,
     interviewA: interviewDataA.length, 
     interviewB: interviewDataB.length, 
     interviewC: interviewDataC.length,
@@ -121,7 +122,15 @@ export const generateSectionDE = (
 
 export async function generatePDF(brandInfo: any, dataA: any, dataB: any, dataC: any, dataDE: any) {
   const startTime = performance.now();
-  logger.info("📄 PDF 생성 시작", { brandName: brandInfo.brand_name });
+  apiLogger.info("📄 PDF 생성 시작", {
+    brandName: brandInfo.brand_name,
+    hasA: Boolean(dataA),
+    hasB: Boolean(dataB),
+    hasC: Boolean(dataC),
+    hasDE: Boolean(dataDE),
+    logoPath: dataDE?.logo_path,
+    charPath: dataDE?.char_path,
+  });
 
   try {
     const response = await fetch(`${BASE_URL}/pdf/generate`, {
@@ -137,13 +146,13 @@ export async function generatePDF(brandInfo: any, dataA: any, dataB: any, dataC:
     });
 
     if (!response.ok) {
-      logger.error(`PDF 생성 실패 - Status ${response.status}`, await response.text());
+      apiLogger.error(`PDF 생성 실패 - Status ${response.status}`, await response.text());
       throw new Error("PDF 생성 실패");
     }
 
     const blob = await response.blob();
-    logger.info(`✅ PDF 생성 완료 (${(blob.size / 1024).toFixed(2)}KB)`, blob.type);
-    logger.timing("/pdf/generate", startTime);
+    apiLogger.info(`✅ PDF 생성 완료 (${(blob.size / 1024).toFixed(2)}KB)`, blob.type);
+    apiLogger.timing("/pdf/generate", startTime);
 
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -152,9 +161,9 @@ export async function generatePDF(brandInfo: any, dataA: any, dataB: any, dataC:
     anchor.click();
     URL.revokeObjectURL(url);
     
-    logger.info(`💾 PDF 다운로드 완료: ${anchor.download}`);
+    apiLogger.info(`💾 PDF 다운로드 완료: ${anchor.download}`);
   } catch (error) {
-    logger.error("PDF 생성/다운로드 중 오류", error);
+    apiLogger.error("PDF 생성/다운로드 중 오류", error);
     throw error;
   }
 }

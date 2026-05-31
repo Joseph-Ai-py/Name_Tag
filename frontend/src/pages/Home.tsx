@@ -1,20 +1,39 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Palette, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Palette, Sparkles, Moon, Sun } from "lucide-react";
 
 export function Home() {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) return savedTheme === "dark";
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
+  const logoSrc = isDark ? "/logo/NameTag_Main_logo_white.png" : "/logo/NameTag_Main_logo_black.png";
+  const symbolSrc = isDark ? "/logo/NameTag_Symbol_logo_white.png" : "/logo/NameTag_Symbol_logo_black.png";
+
   return (
     <div className="min-h-screen bg-gradient-light-bg px-4 py-10 text-light-text dark:bg-gradient-dark-bg dark:text-dark-text sm:px-6 lg:flex lg:items-center lg:justify-center">
       <div className="mx-auto w-full max-w-5xl space-y-10 lg:space-y-12">
         <section className="space-y-6 text-center">
-          <div className="mx-auto">
-            <img src="/logo/logo_black.png" alt="NameTag logo" className="h-12 w-auto block dark:hidden mx-auto" />
-            <img src="/logo/logo_white.png" alt="NameTag logo (white)" className="h-12 w-auto hidden dark:block mx-auto" />
+          <div className="mx-auto flex justify-center">
+            <div className="relative inline-flex items-center justify-center">
+              <img src={logoSrc} alt="NameTag logo" className="h-12 w-auto" />
+              <img
+                src={symbolSrc}
+                alt="NameTag symbol"
+                className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-white p-0.5 shadow-md dark:bg-dark-bg"
+              />
+            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-6">
-            <img src="/logo/logo_onoff_20260531.png" alt="Generated logo" className="h-20 w-auto rounded-md bg-white p-2 object-contain" />
-            <img src="/logo/char_onoff_20260531.png" alt="Generated character" className="h-20 w-auto rounded-md bg-white p-2 object-contain" />
-          </div>
+          {/* 사이트 헤더 로고는 프론트엔드 정적 파일을 사용합니다. 생성된 로고는 PDF 전용입니다. */}
 
           <div className="space-y-4">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-neon text-white shadow-glow">
@@ -25,6 +44,16 @@ export function Home() {
             </h1>
             <p className="text-2xl font-semibold md:text-3xl">나만의 브랜드를 AI와 함께</p>
           </div>
+
+          {/* 초기 페이지용 야간모드 토글 버튼 (우측 상단 고정) */}
+          <button
+            type="button"
+            onClick={() => setIsDark((v) => !v)}
+            aria-label="Toggle theme"
+            className="fixed top-4 right-4 z-50 btn-secondary flex items-center gap-2 px-3 py-2"
+          >
+            {isDark ? <Sun size={18} className="text-neon-cyan" /> : <Moon size={18} className="text-neon-purple" />}
+          </button>
 
           <p className="mx-auto max-w-3xl text-lg leading-8 text-light-text/70 dark:text-dark-text/70 md:text-xl">
             브랜드 이름, 스토리, 비주얼, 로고와 캐릭터까지 하나의 흐름으로 만들 수 있게 정리했습니다.
@@ -42,7 +71,7 @@ export function Home() {
             <ArrowRight size={20} />
           </Link>
           <p className="text-sm font-medium text-light-text/60 dark:text-dark-text/60">
-            섹션 O부터 Preview까지 순차 진행 · 로컬 PDF 다운로드 지원
+            NameTag — AI 기반 브랜드 정체성 생성기: 섹션별 질문으로 브랜드 네임·스토리·비주얼을 만들고 PDF 가이드라인으로 제공합니다.
           </p>
         </section>
 

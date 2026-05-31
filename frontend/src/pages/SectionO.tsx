@@ -5,6 +5,7 @@ import { CandidateSelector } from "../components/CandidateSelector";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageFrame } from "../components/PageFrame";
+import { apiLogger } from "../api/client";
 import { BrandData, useBrandStore } from "../store/brandStore";
 
 const vibeOptions = ["모던", "미니멀", "따뜻함", "프리미엄", "감성", "자연", "테크", "클래식"];
@@ -130,7 +131,17 @@ export function SectionO() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section O: interview request", {
+                  business_type: brandData.business_type,
+                  target: brandData.target,
+                  vibes: brandData.vibes,
+                  keywords: brandData.keywords,
+                });
                 const response = await getOInterview(brandData);
+                apiLogger.info("Section O: interview response", {
+                  questionCount: response.questions?.length ?? 0,
+                  reasoningLength: String(response.reasoning || "").length,
+                });
                 setReasoning(response.reasoning || "");
                 setQuestions(response.questions || []);
               } catch (error) {
@@ -152,7 +163,14 @@ export function SectionO() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section O: candidates request", {
+                  interviewLength: interviewDataO.length,
+                  brandName: brandInfo?.brand_name,
+                });
                 const response = await getOCandidates(brandData, interviewDataO);
+                apiLogger.info("Section O: candidates response", {
+                  candidateCount: response.candidates?.length ?? 0,
+                });
                 setCandidates(response.candidates || []);
               } catch (error) {
                 setError(error instanceof Error ? error.message : "후보 생성 실패");
@@ -175,6 +193,7 @@ export function SectionO() {
             questions={questions}
             reasoning={reasoning}
             onComplete={(formattedText) => {
+              apiLogger.info("Section O: interview text stored", { length: formattedText.length });
               setInterviewDataO(formattedText);
             }}
           />
@@ -184,6 +203,7 @@ export function SectionO() {
           <CandidateSelector
             candidates={candidates}
             onComplete={(brandInfo) => {
+              apiLogger.info("Section O: brand candidate selected", { brandName: (brandInfo as any)?.brand_name });
               setBrandInfo(brandInfo as any);
               setCurrentStep(1);
             }}
