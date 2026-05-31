@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { generateSectionA, getAInterview } from "../api/client";
+import { apiLogger } from "../api/client";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageFrame } from "../components/PageFrame";
@@ -60,7 +61,9 @@ export function SectionA() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section A: interview request", { brandName: brandInfo.brand_name });
                 const response = await getAInterview(brandInfo);
+                apiLogger.info("Section A: interview response", { questionCount: response.questions?.length ?? 0 });
                 setReasoning(response.reasoning || "");
                 setQuestions(response.questions || []);
               } catch (error) {
@@ -81,7 +84,12 @@ export function SectionA() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section A: generate request", {
+                  brandName: brandInfo.brand_name,
+                  interviewLength: interviewDataA.length,
+                });
                 const response = await generateSectionA(brandInfo, interviewDataA);
+                apiLogger.info("Section A: generate response", { keys: Object.keys(response.data_a || {}) });
                 setDataA(response.data_a || {});
               } catch (error) {
                 setError(error instanceof Error ? error.message : "Section A 생성 실패");

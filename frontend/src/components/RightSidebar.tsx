@@ -86,6 +86,7 @@ export function RightSidebar() {
       {/* 미리보기 탭 */}
       {activeTab === "preview" && (
         <div className="max-h-[600px] overflow-y-auto">
+          {/* 생성된 로고/캐릭터는 미리보기에서 노출하지 않습니다. */}
           {htmlPreview ? (
             <div
               className="rounded-xl border border-stone-200 bg-stone-50"

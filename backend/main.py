@@ -13,7 +13,15 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
-from routers import pdf, section_a, section_b, section_c, section_de, section_o
+from routers import section_a, section_b, section_c, section_de, section_o
+
+pdf_router = None
+try:
+    from routers import pdf as pdf_module
+
+    pdf_router = pdf_module.router
+except Exception as exc:
+    print(f"[WARN] PDF router disabled: {exc}")
 
 load_dotenv()
 
@@ -31,7 +39,8 @@ app.include_router(section_a.router, prefix="/api/section-a")
 app.include_router(section_b.router, prefix="/api/section-b")
 app.include_router(section_c.router, prefix="/api/section-c")
 app.include_router(section_de.router, prefix="/api/section-de")
-app.include_router(pdf.router, prefix="/api/pdf")
+if pdf_router is not None:
+    app.include_router(pdf_router, prefix="/api/pdf")
 
 ASSETS_DIR = ROOT_DIR / "assets"
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)

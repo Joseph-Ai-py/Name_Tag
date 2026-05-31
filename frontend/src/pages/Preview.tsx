@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, Download } from "lucide-react";
 import { generatePDF } from "../api/client";
+import { apiLogger } from "../api/client";
 import { PageFrame } from "../components/PageFrame";
 import { useBrandStore } from "../store/brandStore";
 
@@ -39,6 +40,13 @@ export function Preview() {
             onClick={async () => {
               try {
                 setIsExporting(true);
+                apiLogger.info("Preview: pdf export clicked", {
+                  brandName: brandInfo.brand_name,
+                  hasA: Boolean(dataA),
+                  hasB: Boolean(dataB),
+                  hasC: Boolean(dataC),
+                  hasDE: Boolean(dataDE),
+                });
                 await generatePDF(brandInfo, dataA, dataB, dataC, dataDE);
               } finally {
                 setIsExporting(false);

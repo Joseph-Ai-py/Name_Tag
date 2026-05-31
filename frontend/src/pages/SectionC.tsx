@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { generateSectionC, getCInterview } from "../api/client";
+import { apiLogger } from "../api/client";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageFrame } from "../components/PageFrame";
@@ -62,7 +63,9 @@ export function SectionC() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section C: interview request", { brandName: brandInfo.brand_name });
                 const response = await getCInterview(brandInfo);
+                apiLogger.info("Section C: interview response", { questionCount: response.questions?.length ?? 0 });
                 setReasoning(response.reasoning || "");
                 setQuestions(response.questions || []);
               } catch (error) {
@@ -82,7 +85,14 @@ export function SectionC() {
               try {
                 setError(null);
                 setIsLoading(true);
+                apiLogger.info("Section C: generate request", {
+                  brandName: brandInfo.brand_name,
+                  interviewALength: interviewDataA.length,
+                  interviewBLength: interviewDataB.length,
+                  interviewCLength: interviewDataC.length,
+                });
                 const response = await generateSectionC(brandInfo, interviewDataA, interviewDataB, interviewDataC);
+                apiLogger.info("Section C: generate response", { keys: Object.keys(response.data_c || {}) });
                 setDataC(response.data_c || {});
               } catch (error) {
                 setError(error instanceof Error ? error.message : "Section C 생성 실패");
@@ -99,7 +109,16 @@ export function SectionC() {
         {isLoading && <LoadingSpinner label="C 섹션을 생성 중입니다..." />}
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        {questions.length > 0 && <InterviewCard questions={questions} reasoning={reasoning} onComplete={setInterviewDataC} />}
+        {questions.length > 0 && (
+          <InterviewCard
+            questions={questions}
+            reasoning={reasoning}
+            onComplete={(formattedText) => {
+              apiLogger.info("Section C: interview text stored", { length: formattedText.length });
+              setInterviewDataC(formattedText);
+            }}
+          />
+        )}
 
         {dataC && (
           <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-sm leading-7 text-stone-700">

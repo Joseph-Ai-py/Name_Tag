@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from services.gemini_service import request_gemini_image
 
@@ -15,10 +16,19 @@ def _save_image(image_data: bytes, subdir: str, filename_prefix: str, brand_name
     safe_brand_name = brand_name.replace(" ", "_")
     file_path = target_dir / f"{filename_prefix}_{safe_brand_name}_{timestamp}.png"
     file_path.write_bytes(image_data)
+    print(f"[DEBUG] image saved: {file_path.resolve()}")
     return str(file_path.resolve())
 
 
+def _log_image_request(kind: str, brand_name: str, payload: dict[str, Any]) -> None:
+    print(
+        f"[DEBUG] {kind} image request - brand={brand_name}, keys={list(payload.keys())}, "
+        f"concept_keys={list(payload.get('logo_identity', {}).get('concept', {}).keys()) if kind == 'logo' else list(payload.get('character_guide', {}).keys())}"
+    )
+
+
 def generate_logo_image(brand_name: str, de_section_data: dict) -> str | None:
+    _log_image_request("logo", brand_name, de_section_data)
     concept = de_section_data.get("logo_identity", {}).get("concept", {})
     direction_text = concept.get("direction_text", "모던하고 심플한 워드마크 또는 심볼 형태")
     prompt = f"""당신은 세계적인 수준의 브랜드 아이덴티티(BI) 전문 디자이너입니다.
@@ -36,11 +46,15 @@ def generate_logo_image(brand_name: str, de_section_data: dict) -> str | None:
 
     image_data = request_gemini_image(prompt)
     if not image_data:
+        print(f"[DEBUG] logo image generation failed - brand={brand_name}")
         return None
-    return _save_image(image_data, "logos", "logo", brand_name)
+    saved_path = _save_image(image_data, "logos", "logo", brand_name)
+    print(f"[DEBUG] logo image generation complete - brand={brand_name}, path={saved_path}")
+    return saved_path
 
 
 def generate_character_image(brand_name: str, de_section_data: dict) -> str | None:
+    _log_image_request("character", brand_name, de_section_data)
     character_intro = de_section_data.get("character_guide", {}).get("intro", {})
     char_name = character_intro.get("name", "마스코트")
     char_appearance = character_intro.get("appearance", "브랜드 무드에 맞는 귀여운 마스코트")
@@ -59,5 +73,8 @@ def generate_character_image(brand_name: str, de_section_data: dict) -> str | No
 
     image_data = request_gemini_image(prompt)
     if not image_data:
+        print(f"[DEBUG] character image generation failed - brand={brand_name}")
         return None
-    return _save_image(image_data, "characters", "char", brand_name)
+    saved_path = _save_image(image_data, "characters", "char", brand_name)
+    print(f"[DEBUG] character image generation complete - brand={brand_name}, path={saved_path}")
+    return saved_path
