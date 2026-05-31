@@ -6,7 +6,6 @@ import tempfile
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from weasyprint import HTML
 
 from pdf.nametag_pdf_builder import assemble_html
 
@@ -24,6 +23,18 @@ class PdfRequest(BaseModel):
 @router.post("/generate")
 async def generate_pdf(req: PdfRequest):
     try:
+        try:
+            from weasyprint import HTML
+        except (ImportError, OSError) as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "PDF 생성용 라이브러리를 불러올 수 없습니다. "
+                    "WeasyPrint가 필요로 하는 시스템 패키지(libcairo2, libgobject-2.0-0, "
+                    "libpango 등)가 설치되어 있는지 확인하세요."
+                ),
+            ) from exc
+
         print(
             f"[DEBUG] PDF 생성 시작 - brand_name: {req.brand_info.get('brand_name')}, "
             f"data_keys={{'a': list(req.data_a.keys()), 'b': list(req.data_b.keys()), 'c': list(req.data_c.keys()), 'de': list(req.data_de.keys())}}"
