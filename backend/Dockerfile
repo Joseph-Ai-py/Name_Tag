@@ -2,9 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (WeasyPrint 요구사항 및 한글 폰트 추가)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    libglib2.0-0 \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libjpeg-dev \
+    libopenjp2-7-dev \
+    libffi-dev \
+    fonts-nanum \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -15,10 +23,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY backend/ .
-
-# Copy shared modules
-COPY utils/ /app/utils/
-COPY services/ /app/services/
 
 # Create logs directory
 RUN mkdir -p /logs
