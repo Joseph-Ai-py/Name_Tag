@@ -4,6 +4,7 @@ import { generatePDF } from "../api/client";
 import { apiLogger } from "../api/client";
 import { PageFrame } from "../components/PageFrame";
 import { useBrandStore } from "../store/brandStore";
+import { PdfPreviewSidebar } from "../components/PdfPreviewSidebar";
 
 export function Preview() {
   const brandInfo = useBrandStore((state) => state.brandInfo);
@@ -59,13 +60,18 @@ export function Preview() {
           </button>
         </div>
       }
-    >
-      <div className="grid gap-4 lg:grid-cols-2">
+      >
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
         <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5">
           <p className="text-sm font-semibold text-stone-500">확정 브랜드</p>
           <h3 className="mt-2 text-2xl font-black text-stone-900">{brandInfo.brand_name}</h3>
           <p className="mt-2 text-sm text-stone-600">{brandInfo.story_summary}</p>
         </div>
+
+        </div>
+
+        <PdfPreviewSidebar />
 
         <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
           <p className="font-semibold text-stone-900">체크리스트</p>

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest --environment jsdom",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives"
   },
@@ -19,6 +21,12 @@
     "lucide-react": "^0.298.0"
   },
   "devDependencies": {
+    "vitest": "^0.34.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.4.3",
+    "jsdom": "^22.1.0",
+    "@playwright/test": "^1.45.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",

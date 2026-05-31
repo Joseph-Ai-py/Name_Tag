@@ -8,8 +8,11 @@ from prompts.nametag_prompts import (
     get_A2_story_prompt,
     get_A3_positioning_prompt,
     get_A_interview_prompt,
+    get_A_field_regen_prompt,
 )
-from services.gemini_service import request_gemini_text
+from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite
+from utils.ai_utils import normalize_candidates
+from schemas.ai_models import CandidatesResponse
 
 router = APIRouter()
 
@@ -31,6 +34,12 @@ class AInterviewRequest(BaseModel):
 class AGenerateRequest(BaseModel):
     brand_info: BrandInfo
     interview_data_a: str
+
+
+class ARegenRequest(BaseModel):
+    brand_info: BrandInfo
+    context: dict
+    target: str
 
 
 @router.post("/interview")
@@ -55,5 +64,29 @@ async def generate_section_a(req: AGenerateRequest):
             merged.update(part)
 
         return {"data_a": merged}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/re-generate")
+async def regenerate_field(req: ARegenRequest):
+    try:
+        brand = req.brand_info.model_dump()
+        target = req.target
+        context = req.context or {}
+
+        # Build a field-specific prompt using the A-section prompt templates
+        prompt = get_A_field_regen_prompt(brand, target, context)
+
+        # call flash-lite wrapper for small regenerations (logs usage)
+        result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_a.re-generate", "target": target})
+
+        # normalize candidates into consistent shape
+        try:
+            candidates = normalize_candidates(result)
+            validated = CandidatesResponse(candidates=candidates)
+            return {"target": target, "result": validated.dict()}
+        except Exception:
+            return {"target": target, "result": {"candidates": []}}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

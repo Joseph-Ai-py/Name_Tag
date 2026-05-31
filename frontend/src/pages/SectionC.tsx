@@ -23,6 +23,9 @@ export function SectionC() {
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [reasoning, setReasoning] = useState("");
+  const [regenCandidates, setRegenCandidates] = useState<any[]>([]);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenTarget, setRegenTarget] = useState<string | null>(null);
 
   if (!brandInfo) {
     return <PageFrame eyebrow="Section C" title="브랜드 정보가 필요합니다" description="먼저 Section O에서 브랜드 후보를 확정해야 합니다." />;
@@ -111,6 +114,7 @@ export function SectionC() {
 
         {questions.length > 0 && (
           <InterviewCard
+            sectionKey="C"
             questions={questions}
             reasoning={reasoning}
             onComplete={(formattedText) => {
@@ -124,6 +128,124 @@ export function SectionC() {
           <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
             <p className="font-semibold text-stone-900">생성 결과</p>
             <pre className="mt-3 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(dataC, null, 2)}</pre>
+            <div className="mt-4 flex gap-2">
+              {["brand_name", "name_meaning", "slogan", "story_summary"].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setError(null);
+                      setIsLoading(true);
+                      apiLogger.info(`Section C: re-generate ${key}`, { brandName: brandInfo.brand_name });
+                      const mod = await import("../store/brandStore");
+                      const store = mod.useBrandStore.getState();
+                      const applied = store.getAppliedSelection("C", key);
+                      if (applied) {
+                        setRegenCandidates([{ text: applied }]);
+                        setRegenTarget(key);
+                        setRegenOpen(true);
+                        return;
+                      }
+                      const context = { existing: dataC };
+                      const resp = await (await import("../api/client")).regenerateSectionCField(brandInfo, context, key);
+                      const c = resp.result?.candidates || [];
+                      setRegenCandidates(Array.isArray(c) ? c : []);
+                      setRegenTarget(key);
+                      setRegenOpen(true);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "재생성 실패");
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-800"
+                >
+                  재생성 ({key})
+                </button>
+              ))}
+            </div>
+            {regenOpen && (
+              <div className="mt-4 rounded-xl border bg-white p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">재생성된 후보 {regenTarget ? `- ${regenTarget}` : ""}</p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              setError(null);
+                              setIsLoading(true);
+                              apiLogger.info(`Section C: force re-generate ${regenTarget}`, { brandName: brandInfo.brand_name });
+                              const context = { existing: dataC };
+                              const resp = await (await import("../api/client")).regenerateSectionCField(brandInfo, context, String(regenTarget));
+                              const c = resp.result?.candidates || [];
+                              setRegenCandidates(Array.isArray(c) ? c : []);
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : "재생성 실패");
+                            } finally {
+                              setIsLoading(false);
+                            }
+                          }}
+                          className="rounded-full border px-3 py-1 text-sm bg-white"
+                        >
+                          새로 생성
+                        </button>
+                      </div>
+                      <div className="mt-2 grid gap-2">
+                  {regenCandidates.length ? regenCandidates.map((c) => (
+                    <div key={c.text || String(c)} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+                      <div className="text-sm text-stone-700">
+                        <div>{c.text || String(c)}</div>
+                        {c.rationale ? <div className="text-xs text-stone-500">{c.rationale}</div> : null}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const mod = await import("../store/brandStore");
+                              const store = mod.useBrandStore.getState();
+                              const newBrand = { ...(brandInfo as any) } as any;
+                              const newDataC = { ...(dataC as any) } as any;
+                              if (regenTarget === "brand_name") {
+                                newBrand.brand_name = c.text || c;
+                                newDataC.brand_name = c.text || c;
+                                store.setBrandInfo(newBrand);
+                                setDataC(newDataC);
+                              } else if (regenTarget === "name_meaning") {
+                                newBrand.name_meaning = c.text || c;
+                                newDataC.name_meaning = c.text || c;
+                                store.setBrandInfo(newBrand);
+                                setDataC(newDataC);
+                              } else if (regenTarget === "slogan") {
+                                newBrand.slogan = c.text || c;
+                                newDataC.slogan = c.text || c;
+                                store.setBrandInfo(newBrand);
+                                setDataC(newDataC);
+                              } else if (regenTarget === "story_summary") {
+                                newBrand.story_summary = c.text || c;
+                                newDataC.story_summary = c.text || c;
+                                store.setBrandInfo(newBrand);
+                                setDataC(newDataC);
+                              }
+                              if (regenTarget) {
+                                store.setAppliedSelection("C", regenTarget, c.text || c);
+                              }
+                              setRegenOpen(false);
+                              setRegenCandidates([]);
+                              setRegenTarget(null);
+                            } catch (e) {}
+                          }}
+                          className="rounded-full bg-amber-500 px-3 py-1 text-sm text-white"
+                        >
+                          적용
+                        </button>
+                      </div>
+                    </div>
+                  )) : <div className="text-sm text-stone-500">후보가 없습니다.</div>}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

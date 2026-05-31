@@ -61,6 +61,31 @@ export const generateSectionA = (brandInfo: unknown, interviewDataA: string) => 
   return apiPost("/section-a/generate", { brand_info: brandInfo, interview_data_a: interviewDataA });
 };
 
+export const regenerateSectionAField = (brandInfo: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section A Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
+  return apiPost("/section-a/re-generate", { brand_info: brandInfo, context, target });
+};
+
+export const regenerateSectionBField = (brandInfo: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section B Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
+  return apiPost("/section-b/re-generate", { brand_info: brandInfo, context, target });
+};
+
+export const regenerateSectionCField = (brandInfo: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section C Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
+  return apiPost("/section-c/re-generate", { brand_info: brandInfo, context, target });
+};
+
+export const regenerateSectionDEField = (brandInfo: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section DE Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
+  return apiPost("/section-de/re-generate", { brand_info: brandInfo, context, target });
+};
+
+export const regenerateSectionOField = (brandInfo: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section O Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
+  return apiPost("/section-o/re-generate", { brand_data: brandInfo, context, target });
+};
+
 export const getBInterview = (brandInfo: unknown) => {
   apiLogger.info("🎯 Section B Interview 시작", { brandName: (brandInfo as any)?.brand_name });
   return apiPost("/section-b/interview", { brand_info: brandInfo });
@@ -111,6 +136,44 @@ export const generateSectionDE = (
     interviewDE: interviewDataDE.length,
   });
   return apiPost("/section-de/generate", {
+    brand_info: brandInfo,
+    data_c: dataC,
+    interview_data_a: interviewDataA,
+    interview_data_b: interviewDataB,
+    interview_data_c: interviewDataC,
+    interview_data_de: interviewDataDE,
+  });
+};
+
+export const generateSectionDELogo = (
+  brandInfo: unknown,
+  dataC: unknown,
+  interviewDataA: string,
+  interviewDataB: string,
+  interviewDataC: string,
+  interviewDataDE: string,
+) => {
+  apiLogger.info("🎯 Section DE 로고 생성 (단독)", { brandName: (brandInfo as any)?.brand_name });
+  return apiPost("/section-de/generate-logo", {
+    brand_info: brandInfo,
+    data_c: dataC,
+    interview_data_a: interviewDataA,
+    interview_data_b: interviewDataB,
+    interview_data_c: interviewDataC,
+    interview_data_de: interviewDataDE,
+  });
+};
+
+export const generateSectionDECharacter = (
+  brandInfo: unknown,
+  dataC: unknown,
+  interviewDataA: string,
+  interviewDataB: string,
+  interviewDataC: string,
+  interviewDataDE: string,
+) => {
+  apiLogger.info("🎯 Section DE 캐릭터 생성 (단독)", { brandName: (brandInfo as any)?.brand_name });
+  return apiPost("/section-de/generate-character", {
     brand_info: brandInfo,
     data_c: dataC,
     interview_data_a: interviewDataA,
