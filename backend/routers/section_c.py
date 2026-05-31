@@ -4,7 +4,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from prompts.nametag_prompts import get_C0_visual_interview_prompt, get_C1_visual_identity_prompt
-from services.gemini_service import request_gemini_text
+from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite
+from utils.ai_utils import normalize_candidates
+from schemas.ai_models import CandidatesResponse
 
 router = APIRouter()
 
@@ -47,5 +49,26 @@ async def generate_section_c(req: CGenerateRequest):
             get_C1_visual_identity_prompt(brand, previous_context, req.interview_data_c)
         )
         return {"data_c": result}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+class CRegenRequest(BaseModel):
+    brand_info: BrandInfo
+    context: dict
+    target: str
+
+
+@router.post("/re-generate")
+async def regenerate_c_field(req: CRegenRequest):
+    try:
+        prompt = f"Produce 3 alternative short values for `{req.target}` given brand info {req.brand_info} and context {req.context}. Return JSON: { '{"candidates": [..]}' }"
+        result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_c.re-generate", "target": req.target})
+        try:
+            candidates = normalize_candidates(result)
+            validated = CandidatesResponse(candidates=candidates)
+            return {"target": req.target, "result": validated.dict()}
+        except Exception:
+            return {"target": req.target, "result": {"candidates": []}}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

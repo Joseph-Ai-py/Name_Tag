@@ -4,7 +4,7 @@ import os
 import tempfile
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from pdf.nametag_pdf_builder import assemble_html
@@ -50,12 +50,23 @@ async def generate_pdf(req: PdfRequest):
 
         print(f"[DEBUG] PDF 생성 완료: {tmp.name}")
 
+        def file_iterator(path: str, chunk_size: int = 4096):
+            try:
+                with open(path, "rb") as f:
+                    while True:
+                        chunk = f.read(chunk_size)
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+
         brand_name = req.brand_info.get("brand_name", "brand")
-        return FileResponse(
-            path=tmp.name,
-            media_type="application/pdf",
-            filename=f"nametag_{brand_name}_guideline.pdf",
-        )
+        headers = {"Content-Disposition": f'attachment; filename="nametag_{brand_name}_guideline.pdf"'}
+        return StreamingResponse(file_iterator(tmp.name), media_type="application/pdf", headers=headers)
     except Exception as exc:
         print(f"[DEBUG] PDF 생성 오류: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

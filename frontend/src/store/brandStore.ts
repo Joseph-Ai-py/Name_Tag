@@ -47,6 +47,15 @@ export type BrandStore = {
   setIsLoading: (value: boolean) => void;
   setError: (value: string | null) => void;
   reset: () => void;
+  // interview snapshots: key by section (e.g. 'O','A')
+  interviewSnapshots: Record<string, { answers?: string[]; currentIndex?: number; user_inputs?: Record<string, string> }>;
+  saveInterviewSnapshot: (section: string, snapshot: { answers?: string[]; currentIndex?: number; user_inputs?: Record<string, string> }) => void;
+  getInterviewSnapshot: (section: string) => { answers?: string[]; currentIndex?: number; user_inputs?: Record<string, string> } | undefined;
+  clearInterviewSnapshot: (section: string) => void;
+  appliedSelections: Record<string, Record<string, string>>;
+  setAppliedSelection: (section: string, field: string, value: string) => void;
+  getAppliedSelection: (section: string, field: string) => string | undefined;
+  clearAppliedSelections: (section?: string) => void;
 };
 
 const initialState = {
@@ -64,9 +73,10 @@ const initialState = {
   currentStep: 0 as 0 | 1 | 2 | 3 | 4 | 5,
   isLoading: false,
   error: null,
+  appliedSelections: {},
 };
 
-export const useBrandStore = create<BrandStore>((set) => ({
+export const useBrandStore = create<BrandStore>((set, get) => ({
   ...initialState,
   setBrandData: (brandData) => set({ brandData }),
   setInterviewDataO: (value) => set({ interviewDataO: value }),
@@ -83,4 +93,59 @@ export const useBrandStore = create<BrandStore>((set) => ({
   setIsLoading: (value) => set({ isLoading: value }),
   setError: (value) => set({ error: value }),
   reset: () => set({ ...initialState }),
+  interviewSnapshots: (typeof window !== "undefined" && localStorage.getItem("nametag_interviewSnapshots"))
+    ? JSON.parse(localStorage.getItem("nametag_interviewSnapshots") || "{}")
+    : {},
+  appliedSelections: (typeof window !== "undefined" && localStorage.getItem("nametag_appliedSelections"))
+    ? JSON.parse(localStorage.getItem("nametag_appliedSelections") || "{}")
+    : {},
+  setAppliedSelection: (section, field, value) =>
+    set((state) => {
+      const copy = { ...(state.appliedSelections || {}) };
+      copy[section] = { ...(copy[section] || {}), [field]: value };
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("nametag_appliedSelections", JSON.stringify(copy));
+        }
+      } catch (e) {}
+      return { appliedSelections: copy };
+    }),
+  getAppliedSelection: (section, field) => {
+    const s = get().appliedSelections?.[section];
+    return s ? s[field] : undefined;
+  },
+  clearAppliedSelections: (section) => set((state) => {
+    const copy = { ...(state.appliedSelections || {}) };
+    if (section) {
+      delete copy[section];
+    } else {
+      Object.keys(copy).forEach((k) => delete copy[k]);
+    }
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("nametag_appliedSelections", JSON.stringify(copy));
+      }
+    } catch (e) {}
+    return { appliedSelections: copy };
+  }),
+  saveInterviewSnapshot: (section, snapshot) =>
+    set((state) => {
+      const copy = { ...(state.interviewSnapshots || {}) };
+      copy[section] = { ...(copy[section] || {}), ...snapshot };
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("nametag_interviewSnapshots", JSON.stringify(copy));
+        }
+      } catch (e) {}
+      return { interviewSnapshots: copy };
+    }),
+  getInterviewSnapshot: (section) => {
+    const s = get().interviewSnapshots?.[section];
+    return s;
+  },
+  clearInterviewSnapshot: (section) => set((state) => {
+    const copy = { ...(state.interviewSnapshots || {}) };
+    delete copy[section];
+    return { interviewSnapshots: copy };
+  }),
 }));
