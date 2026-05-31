@@ -5,7 +5,6 @@ WORKDIR /app
 # Install system dependencies (WeasyPrint 요구사항 및 한글 폰트 추가)
 RUN apt-get update && apt-get install -y \
     build-essential \
-<<<<<<< HEAD
     libglib2.0-0 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
@@ -14,17 +13,11 @@ RUN apt-get update && apt-get install -y \
     libopenjp2-7-dev \
     libffi-dev \
     fonts-nanum \
-=======
     libcairo2 \
-    libffi-dev \
     libjpeg62-turbo \
     libgdk-pixbuf-2.0-0 \
-    libglib2.0-0 \
     libgobject-2.0-0 \
-    libharfbuzz0b \
-    libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 \
     libpixman-1-0 \
     libpng16-16 \
     libssl3 \
@@ -33,7 +26,6 @@ RUN apt-get update && apt-get install -y \
     libzstd1 \
     shared-mime-info \
     fonts-dejavu-core \
->>>>>>> 12dea519746730eb7d23f70ce17098581add34b6
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
