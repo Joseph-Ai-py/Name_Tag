@@ -146,6 +146,7 @@ export function SectionA() {
                   <p className="font-medium">재생성된 후보 {regenTarget ? `- ${regenTarget}` : ""}</p>
                   <button
                     type="button"
+
                     onClick={async () => {
                       try {
                         setError(null);
@@ -155,6 +156,7 @@ export function SectionA() {
                         const resp = await regenerateSectionAField(brandInfo, context, String(regenTarget));
                         const c = resp.result?.candidates || [];
                         setRegenCandidates(Array.isArray(c) ? c.map((x: any) => ({ text: x.text || x })) : []);
+
                       } catch (err) {
                         setError(err instanceof Error ? err.message : "재생성 실패");
                       } finally {

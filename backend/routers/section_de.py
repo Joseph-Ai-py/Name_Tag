@@ -101,7 +101,11 @@ async def generate_logo_only(req: DEGenerateRequest):
             if not abs_path:
                 return None
             normalized = abs_path.replace("\\", "/")
+<<<<<<< HEAD
             index = normalized.find("backend/assets/")
+=======
+            index = normalized.find("assets/")
+>>>>>>> dba00ee0acc31e840322be9a20539dc3da0d7b01
             return "/" + normalized[index:] if index != -1 else None
 
         result["logo_path"] = to_url_path(logo_path)
@@ -121,7 +125,11 @@ async def generate_character_only(req: DEGenerateRequest):
             if not abs_path:
                 return None
             normalized = abs_path.replace("\\", "/")
+<<<<<<< HEAD
             index = normalized.find("backend/   assets/")
+=======
+            index = normalized.find("assets/")
+>>>>>>> dba00ee0acc31e840322be9a20539dc3da0d7b01
             return "/" + normalized[index:] if index != -1 else None
 
         result["char_path"] = to_url_path(char_path)
@@ -139,7 +147,11 @@ class DERegenRequest(BaseModel):
 @router.post("/re-generate")
 async def regenerate_de_field(req: DERegenRequest):
     try:
+<<<<<<< HEAD
         prompt = f'Produce 3 alternative short values for `{req.target}` based on brand info {req.brand_info} and context {req.context}. Return JSON only: {{"candidates": [..]}}'
+=======
+        prompt = f"Produce 3 alternative short values for `{req.target}` given brand info {req.brand_info} and context {req.context}. Return JSON only: { '{"candidates": [..]}' }"
+>>>>>>> dba00ee0acc31e840322be9a20539dc3da0d7b01
         result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_de.re-generate", "target": req.target})
         try:
             candidates = normalize_candidates(result)

@@ -63,6 +63,7 @@ class BRegenRequest(BaseModel):
 async def regenerate_b_field(req: BRegenRequest):
     try:
         prompt = f'Produce 3 alternative short values for `{req.target}` based on brand info {req.brand_info} and context {req.context}. Return JSON only: {{"candidates": [..]}}'
+
         result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_b.re-generate", "target": req.target})
         try:
             candidates = normalize_candidates(result)
