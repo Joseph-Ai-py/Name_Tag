@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
-import { generateSectionB, getBInterview } from "../api/client";
+import { generateSectionB, getBInterview, regenerateSectionBField } from "../api/client";
 import { apiLogger } from "../api/client";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageFrame } from "../components/PageFrame";
+import { SectionBResult } from "../components/ResultDisplays/SectionBResult";
 import { useBrandStore } from "../store/brandStore";
 
 export function SectionB() {
@@ -22,6 +23,9 @@ export function SectionB() {
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [reasoning, setReasoning] = useState("");
+  const [regenCandidates, setRegenCandidates] = useState<any[]>([]);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenTarget, setRegenTarget] = useState<string | null>(null);
 
   if (!brandInfo) {
     return <PageFrame eyebrow="Section B" title="브랜드 정보가 필요합니다" description="먼저 Section O에서 브랜드 후보를 확정해야 합니다." />;
@@ -109,6 +113,7 @@ export function SectionB() {
 
         {questions.length > 0 && (
           <InterviewCard
+            sectionKey="B"
             questions={questions}
             reasoning={reasoning}
             onComplete={(formattedText) => {
@@ -119,9 +124,30 @@ export function SectionB() {
         )}
 
         {dataB && (
-          <div className="rounded-3xl border border-stone-200 bg-stone-50 p-5 text-sm leading-7 text-stone-700">
-            <p className="font-semibold text-stone-900">생성 결과</p>
-            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(dataB, null, 2)}</pre>
+          <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 space-y-6">
+            <div>
+              <p className="font-semibold text-stone-900 mb-4">📊 생성 결과</p>
+              <SectionBResult
+                data={dataB}
+                onRegenerate={async (key, label) => {
+                  try {
+                    setError(null);
+                    setIsLoading(true);
+                    apiLogger.info(`Section B: re-generate ${key}`, { brandName: brandInfo.brand_name });
+                    const context = { existing: dataB };
+                    const resp = await regenerateSectionBField(brandInfo, context, key);
+                    const c = resp.result?.candidates || [];
+                    setRegenCandidates(Array.isArray(c) ? c.map((x: any) => ({ text: x.text || x })) : []);
+                    setRegenTarget(key);
+                    setRegenOpen(true);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "재생성 실패");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

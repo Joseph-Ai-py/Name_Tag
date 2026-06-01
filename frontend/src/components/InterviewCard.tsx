@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBrandStore } from "../store/brandStore";
 
 type InterviewQuestion = {
   question_text: string;
@@ -9,17 +10,40 @@ type Props = {
   questions: InterviewQuestion[];
   reasoning: string;
   onComplete: (formattedText: string) => void;
+  sectionKey?: string;
 };
 
-export function InterviewCard({ questions, reasoning, onComplete }: Props) {
+export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [userInputs, setUserInputs] = useState<Record<string, string>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingValue, setEditingValue] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewText, setPreviewText] = useState("");
   const completedRef = useRef(false);
+  const saveInterviewSnapshot = useBrandStore((s) => s.saveInterviewSnapshot);
+  const getInterviewSnapshot = useBrandStore((s) => s.getInterviewSnapshot);
 
   useEffect(() => {
+    // attempt to restore snapshot if available for provided sectionKey
     setCurrentIndex(0);
     setAnswers([]);
     completedRef.current = false;
+    if (sectionKey && getInterviewSnapshot) {
+      try {
+        const s = getInterviewSnapshot(sectionKey);
+        if (s && s.answers) {
+          setAnswers(s.answers || []);
+          setCurrentIndex(typeof s.currentIndex === "number" ? s.currentIndex : 0);
+          if (s.user_inputs) {
+            setUserInputs(s.user_inputs || {});
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   }, [questions]);
 
   const currentQuestion = questions[currentIndex];
@@ -66,32 +90,101 @@ export function InterviewCard({ questions, reasoning, onComplete }: Props) {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {currentQuestion.options.map((option) => {
+        {currentQuestion.options.map((option, idx) => {
           const stripped = option.replace(/^\d+\.\s*/, "");
           const active = answers[currentIndex] === stripped;
 
           return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                const nextAnswers = [...answers];
-                nextAnswers[currentIndex] = stripped;
-                setAnswers(nextAnswers);
-                if (currentIndex < questions.length - 1) {
-                  setCurrentIndex((value) => value + 1);
-                }
-              }}
-              className={`rounded-2xl border px-4 py-4 text-left text-sm leading-6 transition ${
-                active
-                  ? "border-amber-500 bg-amber-50 text-amber-900 shadow-sm"
-                  : "border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/40"
-              }`}
-            >
-              {stripped}
-            </button>
+            <div key={option} className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                    const nextAnswers = [...answers];
+                    nextAnswers[currentIndex] = stripped;
+                    setAnswers(nextAnswers);
+                    // save snapshot but do not auto-advance
+                    try {
+                      sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers: nextAnswers, currentIndex, user_inputs: userInputs });
+                    } catch (e) {}
+                }}
+                className={`flex-1 rounded-2xl border px-4 py-4 text-left text-sm leading-6 transition ${
+                  active
+                    ? "border-amber-500 bg-amber-50 text-amber-900 shadow-sm"
+                    : "border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/40"
+                }`}
+              >
+                {stripped}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewText(stripped);
+                  setPreviewOpen(true);
+                }}
+                title="미리보기"
+                className="shrink-0 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 hover:bg-stone-50"
+              >
+                미리보기
+              </button>
+            </div>
           );
         })}
+        {/* 직접 입력 버튼 */}
+        <div>
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(true);
+                setEditingValue(answers[currentIndex] || "");
+              }}
+              className={`w-full rounded-2xl border px-4 py-4 text-left text-sm leading-6 transition border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/40`}
+            >
+              직접 입력 (내 답변 입력)
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                value={editingValue}
+                onChange={(e) => setEditingValue(e.target.value)}
+                className="w-full min-h-[96px] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none"
+                placeholder="직접 입력할 답변을 작성하세요"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                      // save as answer (do not auto-advance)
+                      const nextAnswers = [...answers];
+                      nextAnswers[currentIndex] = editingValue.trim();
+                      setAnswers(nextAnswers);
+                      // also record user input for this question index
+                      setUserInputs((prev) => ({ ...prev, [String(currentIndex)]: editingValue.trim() }));
+                      setIsEditing(false);
+                      setEditingValue("");
+                      try {
+                        sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers: nextAnswers, currentIndex, user_inputs: { ...(userInputs || {}), [String(currentIndex)]: editingValue.trim() } });
+                      } catch (e) {}
+                  }}
+                  className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white"
+                >
+                  저장
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditingValue("");
+                  }}
+                  className="rounded-full border px-4 py-2 text-sm bg-white"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {answers.length > 0 && (
@@ -100,6 +193,63 @@ export function InterviewCard({ questions, reasoning, onComplete }: Props) {
           <pre className="mt-2 overflow-x-auto whitespace-pre-wrap leading-6">{formattedQuestions}</pre>
         </div>
       )}
+      {/* Preview modal */}
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
+          <div className="relative z-50 w-[min(900px,90%)] max-h-[80vh] overflow-auto rounded-2xl bg-white p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">미리보기</h3>
+              <button className="text-sm text-stone-500" onClick={() => setPreviewOpen(false)}>닫기</button>
+            </div>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-stone-700">선택 항목</p>
+                <div className="mt-2 rounded-lg border border-stone-200 bg-stone-50 p-4 text-stone-800">{previewText}</div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-stone-700">현재 응답 기록</p>
+                <pre className="mt-2 rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 whitespace-pre-wrap">{formattedQuestions}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mt-3 flex items-center justify-between">
+        <div />
+        <div className="flex gap-3">
+          <button
+            type="button"
+          onClick={() => {
+              if (currentIndex === 0) return;
+              const prev = Math.max(0, currentIndex - 1);
+              setCurrentIndex(prev);
+              try {
+                sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: prev, user_inputs: userInputs });
+              } catch (e) {}
+            }}
+            className="rounded-full border px-4 py-2 text-sm bg-white"
+          >
+            뒤로
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+                if (!answers[currentIndex]) return;
+                if (currentIndex < questions.length - 1) {
+                  const next = currentIndex + 1;
+                  setCurrentIndex(next);
+                  try {
+                    sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: next, user_inputs: userInputs });
+                  } catch (e) {}
+                }
+            }}
+            className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white"
+          >
+            다음
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -10,7 +10,12 @@ from types import ModuleType
 @lru_cache(maxsize=1)
 def _load_base_module() -> ModuleType:
     root = Path(__file__).resolve().parents[2]
-    file_path = root / "notebook_backend" / "nametag_pdf_builder.py"
+    file_path = root / "app" / "notebook_backend" / "nametag_pdf_builder.py"
+    if not file_path.exists():
+        # 컨테이너 내부 경로
+        file_path = Path("/app/notebook_backend/nametag_pdf_builder.py")
+    if not file_path.exists():
+        raise RuntimeError(f"PDF 빌더 모듈을 찾을 수 없습니다: {file_path}")
     spec = spec_from_file_location("nametag_pdf_builder_base", file_path)
     if not spec or not spec.loader:
         raise RuntimeError("PDF 빌더 모듈을 로드할 수 없습니다.")
@@ -21,16 +26,14 @@ def _load_base_module() -> ModuleType:
 
 def build_d_logo_identity(data_D, logo_image_path=None):
     base = _load_base_module()
-    concept = data_D.get("logo_identity", {}).get("concept", {})
-    guide = data_D.get("logo_identity", {}).get("guide", {})
+    print(f"[DEBUG] build_d_logo_identity - data_D : {data_D}.keys")
+    concept = data_D.get("concept", {})
+    guide = data_D.get("guide", {})
 
     symbol_reason = base.e(concept.get("symbol_reason", ""))
     color_reason = base.e(concept.get("color_reason", ""))
     overall_message = base.e(concept.get("overall_message", "")).replace("\n", "<br>")
     direction_text = base.e(concept.get("direction_text", ""))
-
-    min_size = base.e(guide.get("minimum_size", ""))
-    clear_space = base.e(guide.get("clear_space", ""))
 
     # 디버그 로그
     print(f"[DEBUG] build_d_logo_identity - logo_image_path: {logo_image_path}")
@@ -81,44 +84,13 @@ def build_d_logo_identity(data_D, logo_image_path=None):
             <div class="ct" style="text-align: justify; font-size: 13.5px;">{overall_message}</div>
         </div>
     </div>
-
-    <div class="section" style="margin-top: 32px;">
-        <div class="sec-hdr">
-            <span class="sec-num">Section D-2</span>
-            <span class="sec-title">Logo Usage Guide</span>
-            <span class="sec-sub">크로스 미디어 환경에서 로고의 가독성과 독립성을 보호하기 위한 규정입니다.</span>
-        </div>
-
-        <div class="grid-2">
-            <div class="card centered-card" style="padding: 30px 20px; overflow: hidden; position: relative;">
-                <div style="width: 100px; height: 60px; border: 1px dashed var(--sd); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.02); margin-bottom: 20px;">
-                    <div style="width: 60px; height: 20px; background: var(--text-muted); opacity: 0.2; border-radius: 2px;"></div>
-                </div>
-                <div class="c-lbl">Clear Space · 안전 여백</div>
-                <div class="c-body" style="font-size: 12.5px; font-weight: 500;">{clear_space}</div>
-            </div>
-
-            <div class="card centered-card" style="padding: 30px 20px;">
-                <div style="display: flex; gap: 20px; align-items: flex-end; justify-content: center; height: 60px; margin-bottom: 20px;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                        <div style="width: 40px; height: 14px; background: var(--text-muted); opacity: 0.3; border-radius: 2px;"></div>
-                        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">WEB</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 7px; background: var(--text-muted); opacity: 0.3; border-radius: 1px;"></div>
-                        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">PRINT</span>
-                    </div>
-                </div>
-                <div class="c-lbl">Minimum Size · 최소 크기</div>
-                <div class="c-body" style="font-size: 12.5px; font-weight: 500;">{min_size}</div>
-            </div>
-        </div>
-    </div>
     """
 
 
 def build_e_character_guide(data_E, char_image_path=None):
     base = _load_base_module()
+    print(f"[DEBUG] build_e_character_guide - data_E keys: {list(data_E.keys())}")
+    print(f"[DEBUG] build_e_character_guide - data_E: {data_E}")
     guide = data_E.get("character_guide", {})
     intro = guide.get("intro", {})
     reasoning = guide.get("reasoning", {})

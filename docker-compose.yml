@@ -11,11 +11,14 @@ services:
       - ENV=development
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./backend:/app
+      # [수정됨] 컨테이너 안에서도 /app/backend 구조가 유지되도록 매핑 경로를 수정했습니다.
+      - ./backend:/app/backend
       - ./utils:/utils
       - ./services:/services
       - ./logs:/logs
-    command: uvicorn main:app --reload --host 0.0.0.0
+      - ./notebook_backend:/app/notebook_backend
+    # [수정됨] backend 폴더 안의 main.py를 바라보도록 실행 명령어를 수정했습니다.
+    command: uvicorn backend.main:app --reload --host 0.0.0.0
     logging:
       driver: "json-file"
       options:

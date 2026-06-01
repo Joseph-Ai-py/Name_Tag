@@ -23,10 +23,10 @@ def build_css(seed_color, sd_color, sl_color):
 
     :root {{
         /* 파이썬에서 주입받는 브랜드 핵심 컬러 */
-        --seed: {seed_color};
-        --sd: {sd_color};
-        --sl: {sl_color};
-        
+        --seed: #666666; /* 짙은 중간 회색 (버튼, 아이콘 등 포인트 컬러 - 차분한 강조) */
+        --sd: #000000;   /* 검은색 (소제목, 텍스트 라인 - 가독성 100% 확보) */
+        --sl: #F5F5F5;   /* 아주 밝은 회색 (정보 박스 배경색 - 화사하고 깨끗함) */
+
         /* 세련된 무채색 팔레트 (프리미엄 무드) */
         --bg: #FDFDFD;        /* 완전 흰색이 아닌 아주 미세한 웜톤 배경 */
         --surface: #FFFFFF;    /* 카드/박스 배경 */
@@ -1368,7 +1368,8 @@ def build_c3_visual_mood(C_data):
 # [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 (Logo Identity & Concept) + Section D-2. 로고 사용 가이드 (Logo Usage Guide)
 def build_d_logo_identity(data_D, logo_image_path=None):
     # 1. 데이터 파싱
-    concept = data_D.get('logo_identity', {}).get('concept', {})
+    data_D = data_D['candidates'][0]
+    concept = data_D.get('logo_identity', {}).get('concept', {}) # 디버깅용 출력
     guide = data_D.get('logo_identity', {}).get('guide', {})
 
     symbol_reason = e(concept.get('symbol_reason', ''))
@@ -1427,44 +1428,12 @@ def build_d_logo_identity(data_D, logo_image_path=None):
             <div class="ct" style="text-align: justify; font-size: 13.5px;">{overall_message}</div>
         </div>
     </div>
-
-    <div class="section" style="margin-top: 32px;">
-        <div class="sec-hdr">
-            <span class="sec-num">Section D-2</span>
-            <span class="sec-title">Logo Usage Guide</span>
-            <span class="sec-sub">크로스 미디어 환경에서 로고의 가독성과 독립성을 보호하기 위한 규정입니다.</span>
-        </div>
-
-        <div class="grid-2">
-            <div class="card centered-card" style="padding: 30px 20px; overflow: hidden; position: relative;">
-                <div style="width: 100px; height: 60px; border: 1px dashed var(--sd); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.02); margin-bottom: 20px;">
-                    <div style="width: 60px; height: 20px; background: var(--text-muted); opacity: 0.2; border-radius: 2px;"></div>
-                </div>
-                <div class="c-lbl">Clear Space · 안전 여백</div>
-                <div class="c-body" style="font-size: 12.5px; font-weight: 500;">{clear_space}</div>
-            </div>
-
-            <div class="card centered-card" style="padding: 30px 20px;">
-                <div style="display: flex; gap: 20px; align-items: flex-end; justify-content: center; height: 60px; margin-bottom: 20px;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                        <div style="width: 40px; height: 14px; background: var(--text-muted); opacity: 0.3; border-radius: 2px;"></div>
-                        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">WEB</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 7px; background: var(--text-muted); opacity: 0.3; border-radius: 1px;"></div>
-                        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">PRINT</span>
-                    </div>
-                </div>
-                <div class="c-lbl">Minimum Size · 최소 크기</div>
-                <div class="c-body" style="font-size: 12.5px; font-weight: 500;">{min_size}</div>
-            </div>
-        </div>
-    </div>
     """
 
 # [Page 16] Section E-1. 브랜드 페르소나 & 캐릭터 가이드 (Brand Persona & Character Guide)
 def build_e_character_guide(data_E, char_image_path=None):
     # 1. 데이터 파싱
+    data_E = data_E['candidates'][0]
     guide = data_E.get('character_guide', {})
     intro = guide.get('intro', {})
     reasoning = guide.get('reasoning', {})
@@ -1485,6 +1454,7 @@ def build_e_character_guide(data_E, char_image_path=None):
     img_tag = ""
     if char_image_path and os.path.exists(char_image_path):
         safe_path = char_image_path.replace('\\', '/')
+        print(f'Character image path: {safe_path}')
         img_tag = f'<img src="file:///{safe_path}" style="max-width: 100%; max-height: 320px; object-fit: contain; margin: 0 auto; display: block; border-radius: 8px;">'
     else:
         img_tag = f"""

@@ -103,8 +103,84 @@ def get_O_interview_prompt() -> str:
         "4. 선택지 D"
       ]
     }
-  ]
-}"""
+      ]
+    }"""
+
+
+def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
+    ctx = context or {}
+    base = _join_lines([
+        SYSTEM_PROMPT,
+        "",
+        "아래 제약을 반드시 지키세요:",
+        "- 응답은 반드시 JSON만 출력하세요.",
+        "- 형식: { \"candidates\": [\"...\", ...] }",
+        "- 후보 수는 정확히 3개로 제한하세요.",
+        "- 각 후보는 서로 다른 방향성과 어조를 갖게 하세요.",
+    ])
+
+    if target == "brand_name":
+        return f"""{base}
+
+브랜드 정보: {brand_info}
+문맥(선택적): {ctx}
+
+목표: 브랜드명이 필요합니다. 아래 제약을 지켜 3개의 후보를 생성하세요.
+- 한글 기준 2~12자 권장
+- 간결하고 발음하기 쉬운 이름
+- 각 이름에 대해 짧은 1문장(20자 이내) 이유를 병기하되, 출력 형식은 단순한 문자열 후보 배열로 유지하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["이름1", "이름2", "이름3"] }}
+"""
+
+    if target == "name_meaning":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 현재 선택된 브랜드명에 대해 서로 다른 해석/의미 설명 3가지를 생성하세요. 각 항목은 1문장(50자 이내)으로 간결하게 작성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["의미1", "의미2", "의미3"] }}
+"""
+
+    if target == "slogan":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 핵심 슬로건 3개를 생성하세요. 각 슬로건은 한국어 기준 15자 이내여야 합니다.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["슬로건1", "슬로건2", "슬로건3"] }}
+"""
+
+    if target == "story_summary":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 브랜드 탄생 서사 요약(스토리) 3가지 변주를 생성하세요. 각 항목은 최대 100자 이내로 작성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["스토리1", "스토리2", "스토리3"] }}
+"""
+
+    # fallback: generic short alternatives
+    return f"""{base}
+
+브랜드 정보: {brand_info}
+문맥: {ctx}
+
+목표: 필드 `{target}`에 대한 짧은 대체 후보 3개를 생성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["옵션1", "옵션2", "옵션3"] }}
+"""
 
 
 def get_O_mvb_prompt(interview_text: str) -> str:

@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+
 # Install system dependencies (WeasyPrint 요구사항 및 한글 폰트 추가)
 RUN apt-get update && apt-get install -y \
     build-essential \

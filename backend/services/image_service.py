@@ -6,7 +6,7 @@ from typing import Any
 
 from services.gemini_service import request_gemini_image
 
-ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 
 
 def _save_image(image_data: bytes, subdir: str, filename_prefix: str, brand_name: str) -> str:
