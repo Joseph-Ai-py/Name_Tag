@@ -65,7 +65,6 @@ async def generate_pdf(req: PdfRequest):
                     pass
 
         brand_name = req.brand_info.get("brand_name", "brand")
-<<<<<<< HEAD
         
         # 1. URL 인코딩을 위한 패키지 불러오기 (파일 최상단에 적어도 되지만 여기에 적어도 작동합니다)
         from urllib.parse import quote
