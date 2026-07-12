@@ -75,10 +75,7 @@ async def generate_pdf(req: PdfRequest):
         
         # 3. filename*=utf-8'' 포맷을 사용하여 한글 파일명 헤더에 삽입
         headers = {"Content-Disposition": f"attachment; filename*=utf-8''{encoded_filename}"}
-        
-=======
-        headers = {"Content-Disposition": f'attachment; filename="nametag_{brand_name}_guideline.pdf"'}
->>>>>>> dba00ee0acc31e840322be9a20539dc3da0d7b01
+
         return StreamingResponse(file_iterator(tmp.name), media_type="application/pdf", headers=headers)
     except Exception as exc:
         print(f"[DEBUG] PDF 생성 오류: {exc}")
