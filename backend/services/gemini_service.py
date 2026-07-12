@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import base64
 import time
 from typing import Any
 
@@ -103,7 +104,7 @@ def request_gemini_image(prompt: str, max_retries: int = 3) -> bytes | None:
 
     # 이미지 전용 API 키로 클라이언트 생성
     client = genai.Client(api_key=GEMINI_IMAGE_API_KEY)
-    
+
     # 이미지 출력을 명시하는 config
     generation_config = {
         'response_modalities': ['IMAGE']
@@ -117,20 +118,18 @@ def request_gemini_image(prompt: str, max_retries: int = 3) -> bytes | None:
                 input=prompt,
                 generation_config=generation_config,
             )
-            
-            # 응답 객체에서 이미지 바이트(bytes) 데이터 추출
-            # (버전에 따라 반환 구조가 다를 수 있어 안전하게 속성을 확인하며 추출)
-            if hasattr(interaction, "output_image"):
-                return interaction.output_image.image_bytes
-            elif hasattr(interaction, "parts") and interaction.parts:
-                part = interaction.parts[0]
-                if hasattr(part, "inline_data") and part.inline_data:
-                    return part.inline_data.data
-                if hasattr(part, "image") and part.image:
-                    return part.image.image_bytes
-            
+
+            # AI 스튜디오의 구조를 반영하여 응답 객체에서 이미지 바이트(bytes) 데이터 추출
+            for step in interaction.steps:
+                if step.type == 'model_output' and step.content:
+                    for part in step.content:
+                        if part.type == 'image' and hasattr(part, 'data'):
+                            # Base64 문자열을 디코딩하여 실제 바이트 데이터로 반환
+                            return base64.b64decode(part.data)
+
+            # 이미지가 포함되지 않은 응답이 올 경우
             return None
-            
+
         except Exception as exc:
             error_text = str(exc)
             if _is_retryable(error_text) and attempt < max_retries:
@@ -138,7 +137,6 @@ def request_gemini_image(prompt: str, max_retries: int = 3) -> bytes | None:
                 time.sleep(30)
                 continue
             raise
-
 
 def request_gemini_text_with_model(prompt: str, model: str, max_retries: int = 6) -> dict[str, Any]:
     if not GEMINI_API_KEY:
