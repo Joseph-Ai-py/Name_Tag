@@ -66,15 +66,29 @@ def request_gemini_text(prompt: str, max_retries: int = 10) -> dict[str, Any]:
         raise RuntimeError("GEMINI_API_KEY가 설정되지 않았습니다.")
 
     client = genai.Client(api_key=GEMINI_API_KEY)
+    
+    # 새로운 방식의 config 설정 (딕셔너리 형태)
+    generation_config = {
+        'temperature': 1,
+        'max_output_tokens': 65536,
+        'top_p': 0.95,
+        'thinking_level': 'high', # 필요에 따라 조정 가능
+    }
+
     attempt = 0
     while True:
         try:
-            response = client.models.generate_content(
+            # 새로운 Interactions API 호출
+            interaction = client.interactions.create(
                 model=TEXT_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+                input=prompt,
+                system_instruction=SYSTEM_PROMPT,
+                generation_config=generation_config,
             )
-            return parse_ai_response(response.text or "")
+            
+            # output_text 속성을 통해 직관적으로 텍스트 추출 후 파싱
+            return parse_ai_response(interaction.output_text or "")
+            
         except Exception as exc:
             error_text = str(exc)
             if _is_retryable(error_text) and attempt < max_retries:
@@ -83,27 +97,40 @@ def request_gemini_text(prompt: str, max_retries: int = 10) -> dict[str, Any]:
                 continue
             raise
 
-
 def request_gemini_image(prompt: str, max_retries: int = 3) -> bytes | None:
     if not GEMINI_IMAGE_API_KEY:
         raise RuntimeError("GEMINI_IMAGE_API_KEY가 설정되지 않았습니다.")
 
+    # 이미지 전용 API 키로 클라이언트 생성
     client = genai.Client(api_key=GEMINI_IMAGE_API_KEY)
+    
+    # 이미지 출력을 명시하는 config
+    generation_config = {
+        'response_modalities': ['IMAGE']
+    }
+
     attempt = 0
     while True:
         try:
-            result = client.models.generate_content(
+            interaction = client.interactions.create(
                 model=IMAGE_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+                input=prompt,
+                generation_config=generation_config,
             )
-            if hasattr(result, "parts") and result.parts:
-                part = result.parts[0]
+            
+            # 응답 객체에서 이미지 바이트(bytes) 데이터 추출
+            # (버전에 따라 반환 구조가 다를 수 있어 안전하게 속성을 확인하며 추출)
+            if hasattr(interaction, "output_image"):
+                return interaction.output_image.image_bytes
+            elif hasattr(interaction, "parts") and interaction.parts:
+                part = interaction.parts[0]
                 if hasattr(part, "inline_data") and part.inline_data:
                     return part.inline_data.data
                 if hasattr(part, "image") and part.image:
                     return part.image.image_bytes
+            
             return None
+            
         except Exception as exc:
             error_text = str(exc)
             if _is_retryable(error_text) and attempt < max_retries:
