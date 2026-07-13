@@ -225,6 +225,7 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
 """
     
     # 3. [도입부 & Section O] 조립 (표지 + 기초 정체성)
+    print(brand_info, data_A, data_B, data_C, date_DE)
     if brand_info:
         html += build_cover(brand_info)
         # 💡 예전 build_basic_info를 우리가 업그레이드한 함수로 교체!
