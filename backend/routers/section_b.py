@@ -43,13 +43,26 @@ async def get_interview_questions(req: BInterviewRequest):
 async def generate_section_b(req: BGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
+        
+        print(f"[DEBUG] B1(페르소나) 프롬프트 요청 시작...", flush=True)
         b1 = request_gemini_text(get_B1_persona_prompt(brand, req.interview_data_a, req.interview_data_b))
+        print(f"[DEBUG] B1 결과: {b1}", flush=True)
+        
+        print(f"[DEBUG] B2(저니) 프롬프트 요청 시작...", flush=True)
         b2 = request_gemini_text(get_B2_journey_prompt(brand, req.interview_data_a, req.interview_data_b))
+        print(f"[DEBUG] B2 결과: {b2}", flush=True)
+        
         merged: dict[str, object] = {}
-        for part in [b1, b2]:
-            merged.update(part)
+        for idx, part in enumerate([b1, b2], start=1):
+            if isinstance(part, dict):
+                merged.update(part)
+            else:
+                print(f"[ERROR] B{idx}의 결과값이 딕셔너리가 아닙니다! 데이터 병합 누락. 내용: {part}", flush=True)
+
+        print(f"[DEBUG] 최종 완성된 data_b: {merged}", flush=True)
         return {"data_b": merged}
     except Exception as exc:
+        print(f"[FATAL ERROR] /generate 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
