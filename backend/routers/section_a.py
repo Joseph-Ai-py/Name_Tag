@@ -55,16 +55,32 @@ async def generate_section_a(req: AGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         text = req.interview_data_a
+        
+        print(f"[DEBUG] A1 프롬프트 요청 시작...")
         a1 = request_gemini_text(get_A1_philosophy_prompt(brand, text))
+        print(f"[DEBUG] A1 결과: {a1}")
+        
+        print(f"[DEBUG] A2 프롬프트 요청 시작...")
         a2 = request_gemini_text(get_A2_story_prompt(brand, text))
+        print(f"[DEBUG] A2 결과: {a2}")
+        
+        print(f"[DEBUG] A3 프롬프트 요청 시작...")
         a3 = request_gemini_text(get_A3_positioning_prompt(brand, text))
+        print(f"[DEBUG] A3 결과: {a3}")
 
         merged: dict[str, object] = {}
-        for part in [a1, a2, a3]:
-            merged.update(part)
+        for idx, part in enumerate([a1, a2, a3], start=1):
+            # 방어적 코드: part가 딕셔너리인지 확인
+            if isinstance(part, dict):
+                merged.update(part)
+            else:
+                print(f"[ERROR] A{idx}의 결과값이 딕셔너리가 아닙니다! 내용: {part}")
 
+        print(f"[DEBUG] 최종 완성된 data_a: {merged}")
         return {"data_a": merged}
+        
     except Exception as exc:
+        print(f"[FATAL ERROR] /generate 실행 중 에러 발생: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc))
 
 
