@@ -1,6 +1,23 @@
 import datetime
 import os
 
+# PDF 로컬 렌더링을 위한 절대 경로 변환기
+def get_absolute_path(url_path):
+    """
+    웹 브라우저용 상대 경로(/assets/...)를 PDF 변환기(WeasyPrint)가 읽을 수 있는 
+    서버의 물리적 절대 경로(예: C:\...\backend\assets\...)로 변환합니다.
+    """
+    if not url_path:
+        return None
+        
+    if url_path.startswith('/assets/'):
+        # 현재 파일(builder.py) 위치를 기준으로 프로젝트 최상위 폴더 찾기
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # base_dir과 url_path를 안전하게 결합
+        return os.path.join(base_dir, url_path.strip('/'))
+        
+    return url_path
+
 def build_css(seed_color, sd_color, sl_color):
     """
     대표님의 오리지널 매거진 감성 디자인과 
@@ -89,7 +106,7 @@ def build_css(seed_color, sd_color, sl_color):
       padding: 0;
       background: var(--bg);
       page-break-before: always; 
-      page-break-inside: auto;  /* 💡 avoid를 auto로 변경! (내용이 길면 자연스럽게 넘어가도록 허용) */
+      page-break-inside: auto;  /* avoid를 auto로 변경! (내용이 길면 자연스럽게 넘어가도록 허용) */
       position: relative;
       width: 100%;
     }}
@@ -181,38 +198,44 @@ def build_css(seed_color, sd_color, sl_color):
 
 # 들어온 데이터(O, A, B, C, D, E)의 유무를 판단하여 전체 14페이지 분량의 HTML 문서를 유연하게 조립(레고 블록)하는 메인 통제소
 def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=None):
+    
+    # 프론트엔드에서 씌운 이중 껍질(data_a, data_b 등) 안전하게 벗겨내기
+    if data_A and 'data_a' in data_A: data_A = data_A['data_a']
+    if data_B and 'data_b' in data_B: data_B = data_B['data_b']
+    if data_C and 'data_c' in data_C: data_C = data_C['data_c']
+    if data_DE and 'data_de' in data_DE: data_DE = data_DE['data_de']
+
     # 1. 컬러 시스템 설정 (동적 테마 적용)
     seed_color = brand_info.get('seed_color', '#000000') if brand_info else '#000000'
-    
-    # 기본값 (C파트가 없거나 파싱 실패 시 사용할 임시 매칭 컬러)
     sd_color = "#3A3A3A" # Accent/Highlight 컬러
     sl_color = "#F8F9FA" # Primary/Background 컬러
 
-    # 💡 C파트가 존재하면 실제 브랜드 팔레트에서 HEX 코드를 동적으로 추출!
     if data_C:
         c_dict = {}
-        # 튜플 형태 방어 코드
         if isinstance(data_C, (tuple, list)):
             for part in data_C:
                 if isinstance(part, dict): c_dict.update(part)
         else:
             c_dict = data_C
-            
+
         palette = c_dict.get('color_palette', [])
         for c in palette:
             role = c.get('role', '').lower()
             hex_code = c.get('hex_code', '')
-            
+
             if 'primary' in role:
                 sl_color = hex_code
             elif 'secondary' in role or 'accent' in role:
                 sd_color = hex_code
 
+    # 로고 및 캐릭터 이미지 경로를 WeasyPrint용 절대 경로로 변환
+    logo_path = None
+    char_path = None
     if data_DE:
-        logo_path = data_DE.get('logo_path', None)
-        char_path = data_DE.get('char_path', None)
+        logo_path = get_absolute_path(data_DE.get('logo_path', None))
+        char_path = get_absolute_path(data_DE.get('char_path', None))
 
-    # 2. CSS 주입 및 HTML 뼈대 생성 (프리미엄 구글 폰트 글로벌 로드 포함)
+    # 2. CSS 주입 및 HTML 뼈대 생성
     css = build_css(seed_color, sd_color, sl_color)
     html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -223,15 +246,11 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
 </head>
 <body>
 """
-    
-    # 3. [도입부 & Section O] 조립 (표지 + 기초 정체성)
-    print(brand_info, data_A, data_B, data_C, date_DE)
+
     if brand_info:
         html += build_cover(brand_info)
-        # 💡 예전 build_basic_info를 우리가 업그레이드한 함수로 교체!
         html += build_section_o_mvb(brand_info) 
-        
-    # 4. [Section A] 조립 (Page 3 ~ 8: 내부의 영혼과 무기)
+
     if data_A:
         html += build_a1_philosophy(data_A)
         html += build_a2_core_identity(data_A)
@@ -239,30 +258,23 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
         html += build_a4_verbal_toolkit(data_A)
         html += build_a5_positioning(data_A)
         html += build_a6_promise(data_A)
-        
-    # 5. [Section B] 조립 (Page 9 ~ 11: 타겟 및 여정 퍼널)
+
     if data_B:
         html += build_b1_target_profile(data_B)
         html += build_b2_persona_detail(data_B)
         html += build_b3_customer_journey(data_B)
-        
-    # 6. [Section C] 조립 (Page 12 ~ 14: 비주얼 가이드라인)
+
     if data_C:
         html += build_c1_color_system(data_C)
         html += build_c2_typography(data_C)
         html += build_c3_visual_mood(data_C)
 
-    # 7. [Section D] 조립 (Page 15: 로고 아이덴티티 & 컨셉)
     if data_DE:
         html += build_d_logo_identity(data_DE, logo_path)
-
-    # 8. [Section E] 조립 (Page 16: 브랜드 페르소나 & 캐릭터 가이드)
-    if data_DE:
         html += build_e_character_guide(data_DE, char_path)
 
-    # 9. 문서 닫기
     html += "</body>\n</html>"
-    
+
     return html
 
 # HTML 이스케이프 함수: 브랜드 정보나 AI 분석 결과에 특수문자가 포함되어 있을 때 레이아웃이 깨지는 것을 방지하기 위해 사용합니다.
@@ -1368,34 +1380,32 @@ def build_c3_visual_mood(C_data):
 
 # [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 (Logo Identity & Concept) + Section D-2. 로고 사용 가이드 (Logo Usage Guide)
 def build_d_logo_identity(data_D, logo_image_path=None):
-    # 1. 데이터 파싱
-    data_D = data_D['candidates'][0]
-    concept = data_D.get('logo_identity', {}).get('concept', {}) # 디버깅용 출력
+    # 💡 [핵심 방어 코드] candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
+    if data_D and 'candidates' in data_D and len(data_D['candidates']) > 0:
+        data_D = data_D['candidates'][0]
+        
+    concept = data_D.get('logo_identity', {}).get('concept', {}) 
     guide = data_D.get('logo_identity', {}).get('guide', {})
 
     symbol_reason = e(concept.get('symbol_reason', ''))
     color_reason = e(concept.get('color_reason', ''))
-    # 단락 구분을 위해 줄바꿈 문자를 <br>로 치환
     overall_message = e(concept.get('overall_message', '')).replace('\n', '<br>')
     direction_text = e(concept.get('direction_text', ''))
 
     min_size = e(guide.get('minimum_size', ''))
     clear_space = e(guide.get('clear_space', ''))
 
-    # 2. 이미지 경로 처리 (WeasyPrint 로컬 렌더링용)
+    # 2. 이미지 경로 처리 (WeasyPrint 로컬 렌더링용 절대경로)
     img_tag = ""
     if logo_image_path and os.path.exists(logo_image_path):
         safe_path = logo_image_path.replace('\\', '/')
-        # object-fit: contain을 통해 비율 유지 및 영역 이탈 방지
         img_tag = f'<img src="file:///{safe_path}" style="max-width: 100%; max-height: 280px; object-fit: contain; margin: 0 auto; display: block;">'
     else:
-        # 이미지 생성 실패나 누락 시 보여줄 폴백(Fallback) UI
         img_tag = f"""
         <div style="width: 100%; height: 250px; background: rgba(0,0,0,0.02); border: 1px dashed var(--border-strong); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px;">
             [로고 이미지 렌더링 대기 중]
         </div>"""
 
-    # 3. HTML 조립
     return f"""
     <div class="section" style="page-break-inside: avoid; break-inside: avoid-page;">
         <div class="sec-hdr">
@@ -1431,17 +1441,19 @@ def build_d_logo_identity(data_D, logo_image_path=None):
     </div>
     """
 
+
 # [Page 16] Section E-1. 브랜드 페르소나 & 캐릭터 가이드 (Brand Persona & Character Guide)
 def build_e_character_guide(data_E, char_image_path=None):
-    # 1. 데이터 파싱
-    data_E = data_E['candidates'][0]
+    # 💡 [핵심 방어 코드] candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
+    if data_E and 'candidates' in data_E and len(data_E['candidates']) > 0:
+        data_E = data_E['candidates'][0]
+        
     guide = data_E.get('character_guide', {})
     intro = guide.get('intro', {})
     reasoning = guide.get('reasoning', {})
     story = guide.get('story', {})
 
     char_name = e(intro.get('name', ''))
-    # 외형 묘사와 같이 줄바꿈이 있는 텍스트는 <br>로 치환하여 가독성 확보
     appearance = e(intro.get('appearance', '')).replace('\n', '<br>')
     symbolic_value = e(intro.get('symbolic_value', ''))
 
@@ -1451,11 +1463,10 @@ def build_e_character_guide(data_E, char_image_path=None):
     background_story = e(story.get('background', '')).replace('\n', '<br>')
     brand_role = e(story.get('brand_role', ''))
 
-    # 2. 이미지 경로 처리 (WeasyPrint 로컬 렌더링용)
+    # 2. 이미지 경로 처리 (WeasyPrint 로컬 렌더링용 절대경로)
     img_tag = ""
     if char_image_path and os.path.exists(char_image_path):
         safe_path = char_image_path.replace('\\', '/')
-        print(f'Character image path: {safe_path}')
         img_tag = f'<img src="file:///{safe_path}" style="max-width: 100%; max-height: 320px; object-fit: contain; margin: 0 auto; display: block; border-radius: 8px;">'
     else:
         img_tag = f"""
@@ -1463,7 +1474,6 @@ def build_e_character_guide(data_E, char_image_path=None):
             [캐릭터 이미지 렌더링 대기 중]
         </div>"""
 
-    # 3. HTML 조립
     return f"""
     <div class="section">
         <div class="sec-hdr">
