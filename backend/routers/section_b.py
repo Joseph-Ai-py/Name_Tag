@@ -1,10 +1,14 @@
+# 파일 위치: backend/routers/section_b.py
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from prompts.nametag_prompts import get_B1_persona_prompt, get_B2_journey_prompt, get_B_interview_prompt
-from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite
+# 1. 스키마 강제 함수 및 공용 인터뷰 스키마 임포트
+from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
+from schemas.schema_interview import InterviewResponseSchema
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
 
@@ -34,8 +38,16 @@ class BGenerateRequest(BaseModel):
 @router.post("/interview")
 async def get_interview_questions(req: BInterviewRequest):
     try:
-        return request_gemini_text(get_B_interview_prompt(req.brand_info.model_dump()))
+        print(f"[DEBUG] B 인터뷰(스키마 강제) 프롬프트 요청 시작...", flush=True)
+        # 💡 일반 text 요청 대신 인터뷰 스키마 강제 적용
+        result = request_gemini_with_schema(
+            get_B_interview_prompt(req.brand_info.model_dump()),
+            schema=InterviewResponseSchema
+        )
+        print(f"[DEBUG] B 인터뷰 생성 결과: {result}", flush=True)
+        return result
     except Exception as exc:
+        print(f"[FATAL ERROR] /interview(B) 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -43,15 +55,15 @@ async def get_interview_questions(req: BInterviewRequest):
 async def generate_section_b(req: BGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
-        
+
         print(f"[DEBUG] B1(페르소나) 프롬프트 요청 시작...", flush=True)
         b1 = request_gemini_text(get_B1_persona_prompt(brand, req.interview_data_a, req.interview_data_b))
         print(f"[DEBUG] B1 결과: {b1}", flush=True)
-        
+
         print(f"[DEBUG] B2(저니) 프롬프트 요청 시작...", flush=True)
         b2 = request_gemini_text(get_B2_journey_prompt(brand, req.interview_data_a, req.interview_data_b))
         print(f"[DEBUG] B2 결과: {b2}", flush=True)
-        
+
         merged: dict[str, object] = {}
         for idx, part in enumerate([b1, b2], start=1):
             if isinstance(part, dict):
