@@ -12,10 +12,11 @@ from prompts.nametag_prompts import (
     get_A_interview_prompt,
     get_A_field_regen_prompt,
 )
-# 1. request_gemini_with_schema 임포트
+# 1. request_gemini_with_schema 임포트 및 공용 인터뷰 스키마 임포트
 from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
+from schemas.schema_interview import InterviewResponseSchema # 💡 추가
 
 # 2. schema_a.py 의 스키마들 임포트
 from schemas.schema_a import A1ResponseSchema, A2ResponseSchema, A3ResponseSchema
@@ -23,7 +24,7 @@ from schemas.schema_a import A1ResponseSchema, A2ResponseSchema, A3ResponseSchem
 router = APIRouter()
 
 # =====================================================================
-# 🚨 [복구 완료] 프론트엔드 데이터를 받아낼 필수 데이터 모델 (이게 없으면 422 에러 발생!)
+# 프론트엔드 데이터를 받아낼 필수 데이터 모델
 # =====================================================================
 class BrandInfo(BaseModel):
     brand_name: str
@@ -45,14 +46,22 @@ class ARegenRequest(BaseModel):
     brand_info: BrandInfo
     context: dict | None = None
     target: str
-# =====================================================================
 
+# =====================================================================
 
 @router.post("/interview")
 async def get_interview_questions(req: AInterviewRequest):
     try:
-        return request_gemini_text(get_A_interview_prompt(req.brand_info.model_dump()))
+        print(f"[DEBUG] A 인터뷰(스키마 강제) 프롬프트 요청 시작...", flush=True)
+        # 💡 일반 text 요청을 스키마 강제 요청으로 변경하여 데이터 오염 차단
+        result = request_gemini_with_schema(
+            get_A_interview_prompt(req.brand_info.model_dump()),
+            schema=InterviewResponseSchema
+        )
+        print(f"[DEBUG] A 인터뷰 생성 결과: {result}", flush=True)
+        return result
     except Exception as exc:
+        print(f"[FATAL ERROR] /interview(A) 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -62,7 +71,6 @@ async def generate_section_a(req: AGenerateRequest):
         brand = req.brand_info.model_dump()
         text = req.interview_data_a
 
-        # 3. 일반 text 요청 대신 with_schema 요청으로 변경하고, schema= 도면 주입
         print(f"[DEBUG] A1(스키마 강제) 프롬프트 요청 시작...", flush=True)
         a1 = request_gemini_with_schema(get_A1_philosophy_prompt(brand, text), schema=A1ResponseSchema)
         print(f"[DEBUG] A1 결과: {a1}", flush=True)
@@ -76,7 +84,6 @@ async def generate_section_a(req: AGenerateRequest):
         print(f"[DEBUG] A3 결과: {a3}", flush=True)
 
         merged: dict[str, object] = {}
-        # 스키마 강제를 통과했기 때문에 무조건 dict임이 보장됨
         for part in [a1, a2, a3]:
             merged.update(part)
 
@@ -95,13 +102,9 @@ async def regenerate_field(req: ARegenRequest):
         target = req.target
         context = req.context or {}
 
-        # Build a field-specific prompt using the A-section prompt templates
         prompt = get_A_field_regen_prompt(brand, target, context)
-
-        # call flash-lite wrapper for small regenerations (logs usage)
         result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_a.re-generate", "target": target})
 
-        # normalize candidates into consistent shape
         try:
             candidates = normalize_candidates(result)
             validated = CandidatesResponse(candidates=candidates)
