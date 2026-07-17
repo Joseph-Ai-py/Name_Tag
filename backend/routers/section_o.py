@@ -8,6 +8,10 @@ from services.gemini_service import request_gemini_text, request_gemini_text_fla
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
 
+from services.gemini_service import request_gemini_with_schema
+from schemas.schema_interview import InterviewResponseSchema
+
+
 router = APIRouter()
 
 
@@ -39,10 +43,13 @@ def build_base_prompt(brand_data: BrandData, core_prompt: str, brand_name: str =
 
 
 @router.post("/interview")
-async def get_interview_questions(req: OInterviewRequest):
+async def get_initial_interview(req: dict):
     try:
-        prompt = build_base_prompt(req.brand_data, get_O_interview_prompt())
-        return request_gemini_text(prompt)
+        # 기존 request_gemini_text 대신 with_schema를 써서 무결성 보장!
+        return request_gemini_with_schema(
+            get_O_interview_prompt(), 
+            schema=InterviewResponseSchema
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
