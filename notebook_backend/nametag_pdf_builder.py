@@ -399,6 +399,7 @@ def build_a1_philosophy(A_data):
     
     ess_kw = e(essence.get('keyword', ''))
     ess_defn = e(essence.get('brand_definition', ''))
+    ess_exp = e(essence.get('keyword_explanation', ''))
 
     # 거부(Against) / 지지(For) 가치 태그 생성
     ag_tags = "".join(f'<span class="tag" style="background: #FFF5F5; color: #C53030; border-color: #FEB2B2;">{e(t)}</span>' for t in ag)
@@ -442,11 +443,15 @@ def build_a1_philosophy(A_data):
     </div>
   </div>
 
-  <div style="border-top: 1px solid var(--border-light); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
-    <span class="c-lbl" style="margin-bottom: 0;">Core Brand Essence</span>
-    <span style="font-family: 'Noto Serif KR', serif; font-size: 18px; font-weight: 700; color: var(--sd); letter-spacing: 2px;">{ess_kw}</span>
+  <div style="border-top: 1px solid var(--border-light); padding-top: 16px; margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <span class="c-lbl" style="margin-bottom: 0;">Core Brand Essence</span>
+      <span style="font-family: 'Noto Serif KR', serif; font-size: 18px; font-weight: 700; color: var(--sd); letter-spacing: 2px;">{ess_kw}</span>
+    </div>
+    <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6; text-align: justify; padding-left: 2px;">
+      {ess_exp}
+    </div>
   </div>
-</div>
 """
 
 # [Page 4] Section A-2. 기업 코어 아이덴티티 (Mission, Vision, Values)
