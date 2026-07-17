@@ -1,11 +1,14 @@
+# 파일 위치: backend/routers/section_c.py
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from prompts.nametag_prompts import get_C0_visual_interview_prompt, get_C1_visual_identity_prompt
-# 스키마 강제 함수(request_gemini_with_schema) 임포트
+# 1. request_gemini_with_schema 임포트 및 공용 인터뷰 스키마 추가
 from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
+from schemas.schema_interview import InterviewResponseSchema # 💡 추가
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
 
@@ -39,12 +42,16 @@ class CGenerateRequest(BaseModel):
 @router.post("/interview")
 async def get_interview_questions(req: CInterviewRequest):
     try:
-        print(f"[DEBUG] C 시각적 인터뷰 질문 생성 요청 시작...", flush=True)
-        result = request_gemini_text(get_C0_visual_interview_prompt(req.brand_info.model_dump()))
+        print(f"[DEBUG] C 시각적 인터뷰(스키마 강제) 질문 생성 요청 시작...", flush=True)
+        # 💡 일반 text 요청 대신 인터뷰 스키마 강제 적용
+        result = request_gemini_with_schema(
+            get_C0_visual_interview_prompt(req.brand_info.model_dump()),
+            schema=InterviewResponseSchema
+        )
         print(f"[DEBUG] C 인터뷰 생성 결과: {result}", flush=True)
         return result
     except Exception as exc:
-        print(f"[FATAL ERROR] /interview 실행 중 에러 발생: {str(exc)}", flush=True)
+        print(f"[FATAL ERROR] /interview(C) 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -55,15 +62,13 @@ async def generate_section_c(req: CGenerateRequest):
         previous_context = f"{req.interview_data_a} + {req.interview_data_b}"
 
         print(f"[DEBUG] C1(스키마 강제) 프롬프트 요청 시작...", flush=True)
-        
-        # 💡 3. AI에게 프롬프트와 함께 스키마 도면(CResponseSchema)을 주입하여 강제함
+
         result = request_gemini_with_schema(
             get_C1_visual_identity_prompt(brand, previous_context, req.interview_data_c),
             schema=CResponseSchema
         )
         print(f"[DEBUG] C1(스키마 강제) 결과: {result}", flush=True)
 
-        # 방어적 코드: Gemini의 결과가 딕셔너리 형태가 아닐 경우 프론트엔드 파싱 에러 방지용 경고
         if not isinstance(result, dict):
             print(f"[WARN] C1 결과값이 딕셔너리가 아닙니다! 프론트엔드 렌더링에 문제가 생길 수 있습니다. 내용: {result}", flush=True)
 
@@ -96,7 +101,7 @@ async def regenerate_c_field(req: CRegenRequest):
         except Exception as parse_exc:
             print(f"[ERROR] C 재생성 결과 파싱 실패. 빈 리스트 반환. 에러: {str(parse_exc)}", flush=True)
             return {"target": req.target, "result": {"candidates": []}}
-            
+
     except Exception as exc:
         print(f"[FATAL ERROR] /re-generate 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
