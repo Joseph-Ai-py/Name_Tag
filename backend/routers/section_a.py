@@ -1,3 +1,5 @@
+# 파일 위치: backend/routers/section_a.py
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
@@ -10,37 +12,15 @@ from prompts.nametag_prompts import (
     get_A_interview_prompt,
     get_A_field_regen_prompt,
 )
-from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite
+# 1. request_gemini_with_schema 임포트
+from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
 
+# 2. schema_a.py 의 스키마들 임포트
+from schemas.schema_a import A1ResponseSchema, A2ResponseSchema, A3ResponseSchema
+
 router = APIRouter()
-
-
-class BrandInfo(BaseModel):
-    brand_name: str
-    brand_name_en: str
-    name_meaning: str
-    slogan: str
-    story_summary: str
-    seed_color: str
-    seed_color_reason: str
-
-
-class AInterviewRequest(BaseModel):
-    brand_info: BrandInfo
-
-
-class AGenerateRequest(BaseModel):
-    brand_info: BrandInfo
-    interview_data_a: str
-
-
-class ARegenRequest(BaseModel):
-    brand_info: BrandInfo
-    context: dict
-    target: str
-
 
 @router.post("/interview")
 async def get_interview_questions(req: AInterviewRequest):
@@ -56,31 +36,29 @@ async def generate_section_a(req: AGenerateRequest):
         brand = req.brand_info.model_dump()
         text = req.interview_data_a
         
-        print(f"[DEBUG] A1 프롬프트 요청 시작...")
-        a1 = request_gemini_text(get_A1_philosophy_prompt(brand, text))
-        print(f"[DEBUG] A1 결과: {a1}")
+        # 3. 일반 text 요청 대신 with_schema 요청으로 변경하고, schema= 도면 주입
+        print(f"[DEBUG] A1(스키마 강제) 프롬프트 요청 시작...", flush=True)
+        a1 = request_gemini_with_schema(get_A1_philosophy_prompt(brand, text), schema=A1ResponseSchema)
+        print(f"[DEBUG] A1 결과: {a1}", flush=True)
         
-        print(f"[DEBUG] A2 프롬프트 요청 시작...")
-        a2 = request_gemini_text(get_A2_story_prompt(brand, text))
-        print(f"[DEBUG] A2 결과: {a2}")
+        print(f"[DEBUG] A2(스키마 강제) 프롬프트 요청 시작...", flush=True)
+        a2 = request_gemini_with_schema(get_A2_story_prompt(brand, text), schema=A2ResponseSchema)
+        print(f"[DEBUG] A2 결과: {a2}", flush=True)
         
-        print(f"[DEBUG] A3 프롬프트 요청 시작...")
-        a3 = request_gemini_text(get_A3_positioning_prompt(brand, text))
-        print(f"[DEBUG] A3 결과: {a3}")
+        print(f"[DEBUG] A3(스키마 강제) 프롬프트 요청 시작...", flush=True)
+        a3 = request_gemini_with_schema(get_A3_positioning_prompt(brand, text), schema=A3ResponseSchema)
+        print(f"[DEBUG] A3 결과: {a3}", flush=True)
 
         merged: dict[str, object] = {}
-        for idx, part in enumerate([a1, a2, a3], start=1):
-            # 방어적 코드: part가 딕셔너리인지 확인
-            if isinstance(part, dict):
-                merged.update(part)
-            else:
-                print(f"[ERROR] A{idx}의 결과값이 딕셔너리가 아닙니다! 내용: {part}")
+        # 스키마 강제를 통과했기 때문에 무조건 dict임이 보장됨
+        for part in [a1, a2, a3]:
+            merged.update(part)
 
-        print(f"[DEBUG] 최종 완성된 data_a: {merged}")
+        print(f"[DEBUG] 최종 완성된 data_a: {merged}", flush=True)
         return {"data_a": merged}
         
     except Exception as exc:
-        print(f"[FATAL ERROR] /generate 실행 중 에러 발생: {str(exc)}")
+        print(f"[FATAL ERROR] /generate 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
