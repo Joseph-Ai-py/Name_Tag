@@ -45,11 +45,20 @@ async def generate_section_c(req: CGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         previous_context = f"{req.interview_data_a} + {req.interview_data_b}"
+        
+        print(f"[DEBUG] C1(시각적 정체성) 프롬프트 요청 시작...", flush=True)
         result = request_gemini_text(
             get_C1_visual_identity_prompt(brand, previous_context, req.interview_data_c)
         )
+        print(f"[DEBUG] C1 결과: {result}", flush=True)
+
+        # 방어적 코드: Gemini의 결과가 딕셔너리 형태가 아닐 경우 프론트엔드 파싱 에러 방지용 경고
+        if not isinstance(result, dict):
+            print(f"[WARN] C1 결과값이 딕셔너리가 아닙니다! 프론트엔드 렌더링에 문제가 생길 수 있습니다. 내용: {result}", flush=True)
+
         return {"data_c": result}
     except Exception as exc:
+        print(f"[FATAL ERROR] /generate 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
