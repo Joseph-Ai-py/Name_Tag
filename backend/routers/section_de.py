@@ -10,6 +10,7 @@ from prompts.nametag_prompts import get_DE_identity_prompt, get_DE_interview_pro
 #  스키마 강제 함수(request_gemini_with_schema) 임포트
 from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
 from utils.ai_utils import normalize_candidates
+from schemas.schema_interview import InterviewResponseSchema
 from schemas.ai_models import CandidatesResponse
 from services.image_service import generate_character_image, generate_logo_image
 
