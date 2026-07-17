@@ -57,15 +57,18 @@ def to_url_path(abs_path: str | None) -> str | None:
 @router.post("/interview")
 async def get_interview_questions(req: DEInterviewRequest):
     try:
-        print(f"[DEBUG] DE 인터뷰 질문 생성 요청 시작...", flush=True)
-        result = request_gemini_text(
-            get_DE_interview_prompt(req.brand_info.model_dump(), req.interview_data_c)
+        print(f"[DEBUG] DE 인터뷰(스키마 강제) 질문 생성 요청 시작...", flush=True)
+        # 💡 일반 text 요청 대신 인터뷰 스키마 강제 적용
+        result = request_gemini_with_schema(
+            get_DE_interview_prompt(req.brand_info.model_dump(), req.interview_data_c),
+            schema=InterviewResponseSchema
         )
         print(f"[DEBUG] DE 인터뷰 생성 결과: {result}", flush=True)
         return result
     except Exception as exc:
         print(f"[FATAL ERROR] /interview(DE) 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
+
 
 
 @router.post("/generate")
