@@ -1383,15 +1383,20 @@ def build_c3_visual_mood(C_data):
 </div>
 """
 
-# [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 (Logo Identity & Concept) + Section D-2. 로고 사용 가이드 (Logo Usage Guide)
+# [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 + Section D-2. 로고 사용 가이드
 def build_d_logo_identity(data_D, logo_image_path=None):
-    # 💡 [핵심 방어 코드] candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
+    # candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
     if data_D and 'candidates' in data_D and len(data_D['candidates']) > 0:
         data_D = data_D['candidates'][0]
-        
-    concept = data_D.get('logo_identity', {}).get('concept', {}) 
-    guide = data_D.get('logo_identity', {}).get('guide', {})
 
+    # 로고 데이터의 위치 자동 추적
+    # 스키마 강제로 인해 'logo_identity' 안에 들어있으면 꺼내고, 옛날처럼 밖에 있으면 그냥 씁니다.
+    logo_data = data_D.get('logo_identity', data_D)
+
+    concept = logo_data.get('concept', {}) 
+    guide = logo_data.get('guide', {})
+
+    # 데이터 추출
     symbol_reason = e(concept.get('symbol_reason', ''))
     color_reason = e(concept.get('color_reason', ''))
     overall_message = e(concept.get('overall_message', '')).replace('\n', '<br>')
@@ -1400,7 +1405,7 @@ def build_d_logo_identity(data_D, logo_image_path=None):
     min_size = e(guide.get('minimum_size', ''))
     clear_space = e(guide.get('clear_space', ''))
 
-    # 2. 이미지 경로 처리 (WeasyPrint 로컬 렌더링용 절대경로)
+    # 이미지 경로 처리 (WeasyPrint 로컬 렌더링용 절대경로)
     img_tag = ""
     if logo_image_path and os.path.exists(logo_image_path):
         safe_path = logo_image_path.replace('\\', '/')
@@ -1419,7 +1424,7 @@ def build_d_logo_identity(data_D, logo_image_path=None):
             <span class="sec-sub">브랜드의 철학과 핵심 가치를 시각적으로 압축한 마스터 로고입니다.</span>
         </div>
 
-      <div class="card" style="text-align: center; margin-bottom: 16px; padding: 28px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+        <div class="card" style="text-align: center; margin-bottom: 16px; padding: 28px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
             {img_tag}
         </div>
 
@@ -1428,20 +1433,37 @@ def build_d_logo_identity(data_D, logo_image_path=None):
             <p style="font-weight: 500; font-style: italic;">"{direction_text}"</p>
         </div>
 
-      <div class="grid-2" style="margin-bottom: 12px; gap: 10px;">
-        <div class="card" style="border-top: 3px solid var(--sd); padding: 10px 11px;">
-          <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Symbol Motif</div>
-          <div class="c-body" style="text-align: justify; font-size: 11.5px; line-height: 1.55;">{symbol_reason}</div>
+        <div class="grid-2" style="margin-bottom: 12px; gap: 10px;">
+            <div class="card" style="border-top: 3px solid var(--sd); padding: 10px 11px;">
+                <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Symbol Motif</div>
+                <div class="c-body" style="text-align: justify; font-size: 11.5px; line-height: 1.55;">{symbol_reason}</div>
+            </div>
+            <div class="card" style="border-top: 3px solid var(--sd); padding: 10px 11px;">
+                <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Color Identity</div>
+                <div class="c-body" style="text-align: justify; font-size: 11.5px; line-height: 1.55;">{color_reason}</div>
+            </div>
         </div>
-        <div class="card" style="border-top: 3px solid var(--sd); padding: 10px 11px;">
-          <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Color Identity</div>
-          <div class="c-body" style="text-align: justify; font-size: 11.5px; line-height: 1.55;">{color_reason}</div>
-        </div>
-      </div>
 
         <div class="promise-block" style="margin-top: 6px;">
             <div class="ch">Brand Message · 로고가 전달하는 철학</div>
             <div class="ct" style="text-align: justify; font-size: 13.5px;">{overall_message}</div>
+        </div>
+
+        <div class="sec-hdr" style="margin-top: 32px;">
+            <span class="sec-num">Section D-2</span>
+            <span class="sec-title">Logo Usage Guide</span>
+            <span class="sec-sub">브랜드의 시각적 일관성을 유지하기 위한 최소 규정입니다.</span>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 12px; gap: 10px;">
+            <div class="card">
+                <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Minimum Size · 최소 사용 크기</div>
+                <div class="c-body" style="font-size: 11.5px; line-height: 1.55;">{min_size}</div>
+            </div>
+            <div class="card">
+                <div class="c-lbl" style="font-size: 9.5px; margin-bottom: 6px;">Clear Space · 안전 여백</div>
+                <div class="c-body" style="font-size: 11.5px; line-height: 1.55;">{clear_space}</div>
+            </div>
         </div>
     </div>
     """
@@ -1449,7 +1471,7 @@ def build_d_logo_identity(data_D, logo_image_path=None):
 
 # [Page 16] Section E-1. 브랜드 페르소나 & 캐릭터 가이드 (Brand Persona & Character Guide)
 def build_e_character_guide(data_E, char_image_path=None):
-    # 💡 [핵심 방어 코드] candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
+    # candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
     if data_E and 'candidates' in data_E and len(data_E['candidates']) > 0:
         data_E = data_E['candidates'][0]
         
