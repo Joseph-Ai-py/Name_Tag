@@ -7,10 +7,14 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from prompts.nametag_prompts import get_DE_identity_prompt, get_DE_interview_prompt
-from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite
+#  스키마 강제 함수(request_gemini_with_schema) 임포트
+from services.gemini_service import request_gemini_text, request_gemini_text_flash_lite, request_gemini_with_schema
 from utils.ai_utils import normalize_candidates
 from schemas.ai_models import CandidatesResponse
 from services.image_service import generate_character_image, generate_logo_image
+
+# 섹션 DE 도면(Schema) 임포트
+from schemas.schema_de import DEResponseSchema
 
 router = APIRouter()
 
@@ -69,20 +73,16 @@ async def generate_section_de(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
-        
+
         print(f"[DEBUG] section-de generate start - brand={brand['brand_name']}, "
               f"data_c_keys={list(req.data_c.keys())}, context_lengths={{'a': len(req.interview_data_a), 'b': len(req.interview_data_b), 'c': len(req.interview_data_c), 'de': len(req.interview_data_de)}}", flush=True)
-        
-        result = request_gemini_text(
-            get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de)
+
+        # 💡 3. AI에게 프롬프트와 함께 스키마 도면(DEResponseSchema)을 주입하여 강제함
+        result = request_gemini_with_schema(
+            get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
+            schema=DEResponseSchema
         )
-        
-        # 방어적 코드
-        if not isinstance(result, dict):
-            print(f"[ERROR] DE 결과값이 딕셔너리가 아닙니다! 이미지 생성에 실패할 수 있습니다. 내용: {result}", flush=True)
-            result = {} # 에러 방지용 빈 딕셔너리 할당
-        else:
-            print(f"[DEBUG] section-de identity generated - keys={list(result.keys())}", flush=True)
+        print(f"[DEBUG] section-de identity generated (스키마 강제) - keys={list(result.keys())}", flush=True)
 
         print(f"[DEBUG] 로고 및 캐릭터 이미지 생성 시작...", flush=True)
         logo_path = generate_logo_image(brand["brand_name"], result)
@@ -92,7 +92,7 @@ async def generate_section_de(req: DEGenerateRequest):
 
         result["logo_path"] = to_url_path(logo_path)
         result["char_path"] = to_url_path(char_path)
-        
+
         print(f"[DEBUG] section-de generate done - logo_url={result['logo_path']}, char_url={result['char_path']}", flush=True)
         print(f"[DEBUG] section-de final result - {result}", flush=True)
 
@@ -106,17 +106,18 @@ async def generate_section_de(req: DEGenerateRequest):
 async def generate_logo_only(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
+        previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
         print(f"[DEBUG] DE 단독 로고 생성 요청 시작...", flush=True)
-        
-        result = request_gemini_text(get_DE_identity_prompt(brand, req.data_c, f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}", req.interview_data_de))
-        
-        if not isinstance(result, dict):
-            print(f"[WARN] 로고 생성을 위한 텍스트 결과가 딕셔너리가 아님.", flush=True)
-            result = {}
-            
+
+        # 단독 로고 생성 시에도 텍스트 구조 누락 방지를 위해 스키마 적용
+        result = request_gemini_with_schema(
+            get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
+            schema=DEResponseSchema
+        )
+
         logo_path = generate_logo_image(brand["brand_name"], result)
         result["logo_path"] = to_url_path(logo_path)
-        
+
         print(f"[DEBUG] 단독 로고 생성 완료: {result['logo_path']}", flush=True)
         return {"logo_path": result["logo_path"], "data_de": result}
     except Exception as exc:
@@ -128,17 +129,18 @@ async def generate_logo_only(req: DEGenerateRequest):
 async def generate_character_only(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
+        previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
         print(f"[DEBUG] DE 단독 캐릭터 생성 요청 시작...", flush=True)
-        
-        result = request_gemini_text(get_DE_identity_prompt(brand, req.data_c, f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}", req.interview_data_de))
-        
-        if not isinstance(result, dict):
-            print(f"[WARN] 캐릭터 생성을 위한 텍스트 결과가 딕셔너리가 아님.", flush=True)
-            result = {}
-            
+
+        # 단독 캐릭터 생성 시에도 텍스트 구조 누락 방지를 위해 스키마 적용
+        result = request_gemini_with_schema(
+            get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
+            schema=DEResponseSchema
+        )
+
         char_path = generate_character_image(brand["brand_name"], result)
         result["char_path"] = to_url_path(char_path)
-        
+
         print(f"[DEBUG] 단독 캐릭터 생성 완료: {result['char_path']}", flush=True)
         return {"char_path": result["char_path"], "data_de": result}
     except Exception as exc:
@@ -160,7 +162,7 @@ async def regenerate_de_field(req: DERegenRequest):
         print(f"[DEBUG] DE 재생성({req.target}) 요청 시작...", flush=True)
         result = request_gemini_text_flash_lite(prompt, metadata={"endpoint": "section_de.re-generate", "target": req.target})
         print(f"[DEBUG] DE 재생성 원본 결과: {result}", flush=True)
-        
+
         try:
             candidates = normalize_candidates(result)
             validated = CandidatesResponse(candidates=candidates)
@@ -169,7 +171,7 @@ async def regenerate_de_field(req: DERegenRequest):
         except Exception as parse_exc:
             print(f"[ERROR] DE 재생성 결과 파싱 실패. 빈 리스트 반환. 에러: {str(parse_exc)}", flush=True)
             return {"target": req.target, "result": {"candidates": []}}
-            
+
     except Exception as exc:
         print(f"[FATAL ERROR] /re-generate(DE) 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
