@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { generateSectionA, getAInterview, regenerateSectionAField } from "../api/client";
 import { apiLogger } from "../api/client";
@@ -26,6 +26,11 @@ export function SectionA() {
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenTarget, setRegenTarget] = useState<string | null>(null);
 
+  const handleComplete = useCallback((formattedText: string) => {
+    apiLogger.info("Section A: interview text stored", { length: formattedText.length });
+    setInterviewDataA(formattedText);
+  }, [setInterviewDataA]);
+
   if (!brandInfo) {
     return <PageFrame eyebrow="Section A" title="브랜드 정보가 필요합니다" description="먼저 Section O에서 브랜드 후보를 확정해야 합니다." />;
   }
@@ -48,7 +53,7 @@ export function SectionA() {
           <button
             type="button"
             onClick={() => setCurrentStep(2)}
-            disabled={!dataA}
+            disabled={!dataA || Object.keys(dataA).length === 0}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300"
           >
             다음 단계
@@ -61,7 +66,10 @@ export function SectionA() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
+            disabled={isLoading}
             onClick={async () => {
+              setQuestions([]);
+              setReasoning("");
               try {
                 setError(null);
                 setIsLoading(true);
@@ -76,14 +84,17 @@ export function SectionA() {
                 setIsLoading(false);
               }
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600"
+            className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${
+              isLoading ? "bg-stone-300 cursor-not-allowed text-stone-500" : "bg-amber-500 hover:bg-amber-600 text-white"
+            }`}
           >
             <Sparkles size={16} />
-            인터뷰 시작
+            {isLoading ? "인터뷰 생성 중..." : "인터뷰 시작"}
           </button>
 
           <button
             type="button"
+            disabled={isLoading}
             onClick={async () => {
               try {
                 setError(null);
@@ -93,28 +104,31 @@ export function SectionA() {
                   interviewLength: interviewDataA.length,
                 });
                 const response = await generateSectionA(brandInfo, interviewDataA);
-                apiLogger.info("Section A: generate response", { keys: Object.keys(response.data_a || {}) });
-                setDataA(response.data_a || {});
+                const finalData = response.data_a || response.data || response;
+                apiLogger.info("Section A: generate response", { keys: Object.keys(finalData || {}) });
+                setDataA(finalData || {});
               } catch (error) {
                 setError(error instanceof Error ? error.message : "Section A 생성 실패");
               } finally {
                 setIsLoading(false);
               }
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-amber-300 hover:bg-amber-50/40"
+            className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
+              isLoading ? "bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed" : "border-stone-200 bg-white text-stone-800 hover:border-amber-300 hover:bg-amber-50/40"
+            }`}
           >
-            생성 시작
+            {isLoading ? "생성 중..." : "생성 시작"}
           </button>
         </div>
 
-        {isLoading && <LoadingSpinner label="A 섹션을 생성 중입니다..." />}
+        {isLoading && <LoadingSpinner label="A 섹션을 처리 중입니다..." />}
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        {questions.length > 0 && (
-          <InterviewCard sectionKey="A" questions={questions} reasoning={reasoning} onComplete={setInterviewDataA} />
+        {Array.isArray(questions) && questions.length > 0 && (
+          <InterviewCard sectionKey="A" questions={questions} reasoning={reasoning} onComplete={handleComplete} />
         )}
 
-        {dataA && (
+        {dataA && Object.keys(dataA).length > 0 && (
           <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 space-y-6">
             <div>
               <p className="font-semibold text-stone-900 mb-4">✨ 생성 결과</p>
@@ -139,14 +153,14 @@ export function SectionA() {
                 }}
               />
             </div>
-            
+
             {regenOpen && (
               <div className="mt-6 rounded-xl border bg-white p-4">
                 <div className="flex items-center justify-between mb-4">
                   <p className="font-medium">재생성된 후보 {regenTarget ? `- ${regenTarget}` : ""}</p>
                   <button
                     type="button"
-
+                    disabled={isLoading}
                     onClick={async () => {
                       try {
                         setError(null);
@@ -156,7 +170,6 @@ export function SectionA() {
                         const resp = await regenerateSectionAField(brandInfo, context, String(regenTarget));
                         const c = resp.result?.candidates || [];
                         setRegenCandidates(Array.isArray(c) ? c.map((x: any) => ({ text: x.text || x })) : []);
-
                       } catch (err) {
                         setError(err instanceof Error ? err.message : "재생성 실패");
                       } finally {
@@ -177,13 +190,13 @@ export function SectionA() {
                       </div>
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={() => {
                           try {
-                            const mod = await import("../store/brandStore");
-                            const store = mod.useBrandStore.getState();
+                            const store = useBrandStore.getState();
                             const newBrand = { ...(brandInfo as any) } as any;
                             const newDataA = { ...(dataA as any) } as any;
                             const value = c.text || c;
+                            
                             if (regenTarget === "brand_name") {
                               newBrand.brand_name = value;
                               newDataA.brand_name = value;
@@ -197,17 +210,21 @@ export function SectionA() {
                               newBrand.story_summary = value;
                               newDataA.story_summary = value;
                             }
+                            
                             setDataA(newDataA);
                             store.setBrandInfo(newBrand);
+                            
                             if (regenTarget) {
                               store.setAppliedSelection("A", regenTarget, value);
                             }
                             setRegenOpen(false);
                             setRegenCandidates([]);
                             setRegenTarget(null);
-                          } catch (e) {}
+                          } catch (e) {
+                            console.error("적용 중 오류:", e);
+                          }
                         }}
-                        className="rounded-full bg-amber-500 px-3 py-1 text-sm text-white"
+                        className="rounded-full bg-amber-500 px-3 py-1 text-sm text-white hover:bg-amber-600"
                       >
                         적용
                       </button>
