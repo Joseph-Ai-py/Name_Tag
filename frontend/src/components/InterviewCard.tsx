@@ -26,7 +26,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
   const getInterviewSnapshot = useBrandStore((s) => s.getInterviewSnapshot);
 
   useEffect(() => {
-    // attempt to restore snapshot if available for provided sectionKey
     setCurrentIndex(0);
     setAnswers([]);
     completedRef.current = false;
@@ -40,13 +39,14 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
             setUserInputs(s.user_inputs || {});
           }
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
-  }, [questions]);
+  }, [questions, sectionKey, getInterviewSnapshot]);
 
-  const currentQuestion = questions[currentIndex];
+  // 💡 데이터 렌더링 안전장치: questions 변경 시 동기화
+  const currentQuestion = useMemo(() => {
+    return questions[currentIndex] || questions[0];
+  }, [questions, currentIndex]);
 
   const formattedQuestions = useMemo(
     () =>
@@ -64,7 +64,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
     }
   }, [answers, formattedQuestions, onComplete, questions.length]);
 
-  if (!questions.length) {
+  if (!questions.length || !currentQuestion) {
     return (
       <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 text-stone-600">
         질문이 아직 생성되지 않았습니다.
@@ -95,14 +95,14 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
           const active = answers[currentIndex] === stripped;
 
           return (
-            <div key={option} className="flex items-stretch gap-2">
+            // 💡 고유 키값 조합: 질문 인덱스 + 옵션 인덱스
+            <div key={`${currentIndex}-${idx}`} className="flex items-stretch gap-2">
               <button
                 type="button"
                 onClick={() => {
                     const nextAnswers = [...answers];
                     nextAnswers[currentIndex] = stripped;
                     setAnswers(nextAnswers);
-                    // save snapshot but do not auto-advance
                     try {
                       sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers: nextAnswers, currentIndex, user_inputs: userInputs });
                     } catch (e) {}
@@ -130,7 +130,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
             </div>
           );
         })}
-        {/* 직접 입력 버튼 */}
         <div>
           {!isEditing ? (
             <button
@@ -139,7 +138,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 setIsEditing(true);
                 setEditingValue(answers[currentIndex] || "");
               }}
-              className={`w-full rounded-2xl border px-4 py-4 text-left text-sm leading-6 transition border-stone-200 bg-white text-stone-700 hover:border-amber-300 hover:bg-amber-50/40`}
+              className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-4 text-left text-sm leading-6 text-stone-700 transition hover:border-amber-300 hover:bg-amber-50/40"
             >
               직접 입력 (내 답변 입력)
             </button>
@@ -155,11 +154,9 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 <button
                   type="button"
                   onClick={() => {
-                      // save as answer (do not auto-advance)
                       const nextAnswers = [...answers];
                       nextAnswers[currentIndex] = editingValue.trim();
                       setAnswers(nextAnswers);
-                      // also record user input for this question index
                       setUserInputs((prev) => ({ ...prev, [String(currentIndex)]: editingValue.trim() }));
                       setIsEditing(false);
                       setEditingValue("");
@@ -173,10 +170,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditingValue("");
-                  }}
+                  onClick={() => { setIsEditing(false); setEditingValue(""); }}
                   className="rounded-full border px-4 py-2 text-sm bg-white"
                 >
                   취소
@@ -193,7 +187,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
           <pre className="mt-2 overflow-x-auto whitespace-pre-wrap leading-6">{formattedQuestions}</pre>
         </div>
       )}
-      {/* Preview modal */}
+      
       {previewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
@@ -220,7 +214,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
         <div className="flex gap-3">
           <button
             type="button"
-          onClick={() => {
+            onClick={() => {
               if (currentIndex === 0) return;
               const prev = Math.max(0, currentIndex - 1);
               setCurrentIndex(prev);
