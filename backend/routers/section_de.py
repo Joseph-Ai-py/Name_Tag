@@ -81,7 +81,6 @@ async def generate_section_de(req: DEGenerateRequest):
         print(f"[DEBUG] section-de generate start - brand={brand['brand_name']}, "
               f"data_c_keys={list(req.data_c.keys())}, context_lengths={{'a': len(req.interview_data_a), 'b': len(req.interview_data_b), 'c': len(req.interview_data_c), 'de': len(req.interview_data_de)}}", flush=True)
 
-        # 💡 3. AI에게 프롬프트와 함께 스키마 도면(DEResponseSchema)을 주입하여 강제함
         result = request_gemini_with_schema(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
             schema=DEResponseSchema
@@ -89,8 +88,25 @@ async def generate_section_de(req: DEGenerateRequest):
         print(f"[DEBUG] section-de identity generated (스키마 강제) - keys={list(result.keys())}", flush=True)
 
         print(f"[DEBUG] 로고 및 캐릭터 이미지 생성 시작...", flush=True)
-        logo_path = generate_logo_image(brand["brand_name"], result)
-        char_path = generate_character_image(brand["brand_name"], result)
+
+        logo_path = generate_logo_image(
+            brand_name=brand["brand_name"],
+            result=result,
+            data_c=req.data_c,
+            brand_info=brand,
+            deepdive_answers_text=req.interview_data_de,
+        )
+
+        intro = result["character_guide"]["intro"]
+        reasoning = result["character_guide"]["reasoning"]
+        char_path = generate_character_image(
+            brand_name=brand["brand_name"],
+            char_name=intro["name"],
+            char_appearance=intro["appearance"],
+            symbolic_value=intro["symbolic_value"],
+            emotional_connection=reasoning["emotional_connection"],
+            data_c=req.data_c,
+        )
 
         print(f"[DEBUG] section-de images generated - logo_path={logo_path}, char_path={char_path}", flush=True)
 
@@ -123,7 +139,7 @@ async def generate_logo_only(req: DEGenerateRequest):
             result=result,
             data_c=req.data_c,
             brand_info=brand,
-            deepdive_answers_text=req.interview_data_de,  # DE 인터뷰 답변 = 로고 전용 인터뷰
+            deepdive_answers_text=req.interview_data_de,
         )
         result["logo_path"] = to_url_path(logo_path)
 
@@ -141,13 +157,21 @@ async def generate_character_only(req: DEGenerateRequest):
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
         print(f"[DEBUG] DE 단독 캐릭터 생성 요청 시작...", flush=True)
 
-        # 단독 캐릭터 생성 시에도 텍스트 구조 누락 방지를 위해 스키마 적용
         result = request_gemini_with_schema(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
             schema=DEResponseSchema
         )
 
-        char_path = generate_character_image(brand["brand_name"], result)
+        intro = result["character_guide"]["intro"]
+        reasoning = result["character_guide"]["reasoning"]
+        char_path = generate_character_image(
+            brand_name=brand["brand_name"],
+            char_name=intro["name"],
+            char_appearance=intro["appearance"],
+            symbolic_value=intro["symbolic_value"],
+            emotional_connection=reasoning["emotional_connection"],
+            data_c=req.data_c,
+        )
         result["char_path"] = to_url_path(char_path)
 
         print(f"[DEBUG] 단독 캐릭터 생성 완료: {result['char_path']}", flush=True)
