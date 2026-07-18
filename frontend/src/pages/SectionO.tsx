@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { getOCandidates, getOInterview } from "../api/client";
+import { getOCandidates, getOInterview, regenerateSectionOField } from "../api/client";
 import { CandidateSelector } from "../components/CandidateSelector";
 import { InterviewCard } from "../components/InterviewCard";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -37,14 +37,21 @@ export function SectionO() {
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenTarget, setRegenTarget] = useState<string | null>(null);
 
-  const canInterview = brandData.business_type.trim().length > 1 && brandData.target.trim().length > 1;
-  const canGenerateCandidates = interviewDataO.trim().length > 0;
+  // 💡 [방어 코드] undefined로 인한 화면 멈춤 방지
+  const canInterview = (brandData?.business_type || "").trim().length > 1 && (brandData?.target || "").trim().length > 1;
+  const canGenerateCandidates = (interviewDataO || "").trim().length > 0;
 
   const vibeSet = useMemo(() => new Set(brandData.vibes), [brandData.vibes]);
 
   const updateBrandData = (patch: Partial<BrandData>) => {
     setBrandData({ ...brandData, ...patch });
   };
+
+  // 💡 [수정] 무한 렌더링 방지 및 안정적인 상태 저장을 위한 useCallback 적용
+  const handleComplete = useCallback((formattedText: string) => {
+    apiLogger.info("Section O: interview text stored", { length: formattedText.length });
+    setInterviewDataO(formattedText);
+  }, [setInterviewDataO]);
 
   return (
     <PageFrame
@@ -129,8 +136,11 @@ export function SectionO() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            disabled={!canInterview}
+            disabled={isLoading || !canInterview} // 💡 로딩 중 중복 클릭 방지
             onClick={async () => {
+              setQuestions([]); // 💡 이전 데이터 초기화
+              setReasoning("");
+              setCandidates([]);
               try {
                 setError(null);
                 setIsLoading(true);
@@ -161,7 +171,7 @@ export function SectionO() {
 
           <button
             type="button"
-            disabled={!canInterview}
+            disabled={isLoading || !canInterview}
             onClick={async () => {
               try {
                 setError(null);
@@ -171,7 +181,6 @@ export function SectionO() {
                   target: brandData.target,
                   vibes: brandData.vibes,
                 });
-                // 인터뷰 없이 기본값(빈 문자열)으로 후보 생성 요청
                 const response = await getOCandidates(brandData, "");
                 apiLogger.info("Section O: skip interview candidates response", {
                   candidateCount: response.candidates?.length ?? 0,
@@ -190,7 +199,7 @@ export function SectionO() {
 
           <button
             type="button"
-            disabled={!canGenerateCandidates}
+            disabled={isLoading || !canGenerateCandidates}
             onClick={async () => {
               try {
                 setError(null);
@@ -216,23 +225,20 @@ export function SectionO() {
           </button>
         </div>
 
-        {isLoading && <LoadingSpinner label="AI가 질문 또는 후보를 생성 중입니다..." />}
+        {isLoading && <LoadingSpinner label="AI가 질문 또는 후보를 처리 중입니다..." />}
 
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        {questions.length > 0 && (
+        {Array.isArray(questions) && questions.length > 0 && (
           <InterviewCard
             sectionKey="O"
             questions={questions}
             reasoning={reasoning}
-            onComplete={(formattedText) => {
-              apiLogger.info("Section O: interview text stored", { length: formattedText.length });
-              setInterviewDataO(formattedText);
-            }}
+            onComplete={handleComplete}
           />
         )}
 
-        {candidates.length > 0 && (
+        {Array.isArray(candidates) && candidates.length > 0 && (
           <CandidateSelector
             candidates={candidates}
             onComplete={(brandInfo) => {
@@ -245,40 +251,44 @@ export function SectionO() {
 
         {brandInfo && (
           <div className="mt-4">
-            <p className="text-sm font-semibold text-stone-700">현재 브랜드</p>
-            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(brandInfo, null, 2)}</pre>
-            <div className="mt-3 flex gap-2">
+            <p className="text-sm font-semibold text-stone-700">현재 확정된 브랜드</p>
+            <pre className="mt-2 overflow-x-auto rounded-xl bg-stone-100 p-4 text-sm whitespace-pre-wrap">{JSON.stringify(brandInfo, null, 2)}</pre>
+            <div className="mt-3 flex flex-wrap gap-2">
               {["brand_name", "name_meaning", "slogan", "story_summary"].map((key) => (
                 <button
                   key={key}
                   type="button"
+                  disabled={isLoading}
                   onClick={async () => {
                     try {
                       setError(null);
                       setIsLoading(true);
                       apiLogger.info(`Section O: re-generate ${key}`, { brandName: brandInfo.brand_name });
-                        const mod = await import("../store/brandStore");
-                        const store = mod.useBrandStore.getState();
-                        const applied = store.getAppliedSelection("O", key);
-                        if (applied) {
-                          setRegenCandidates([{ text: applied }]);
-                          setRegenTarget(key);
-                          setRegenOpen(true);
-                          return;
-                        }
-                        const context = { existing: brandInfo };
-                        const resp = await (await import("../api/client")).regenerateSectionOField(brandData, context, key);
-                        const c = resp.result?.candidates || [];
-                        setRegenCandidates(Array.isArray(c) ? c : []);
+                      
+                      // 💡 불필요한 동적 임포트(await import) 제거 및 직접 호출
+                      const store = useBrandStore.getState();
+                      const applied = store.getAppliedSelection("O", key);
+                      
+                      if (applied) {
+                        setRegenCandidates([{ text: applied }]);
                         setRegenTarget(key);
                         setRegenOpen(true);
+                        return;
+                      }
+                      
+                      const context = { existing: brandInfo };
+                      const resp = await regenerateSectionOField(brandData, context, key);
+                      const c = resp.result?.candidates || [];
+                      setRegenCandidates(Array.isArray(c) ? c : []);
+                      setRegenTarget(key);
+                      setRegenOpen(true);
                     } catch (err) {
                       setError(err instanceof Error ? err.message : "재생성 실패");
                     } finally {
                       setIsLoading(false);
                     }
                   }}
-                  className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-800"
+                  className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-800 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:bg-stone-100"
                 >
                   재생성 ({key})
                 </button>
@@ -286,71 +296,76 @@ export function SectionO() {
             </div>
 
             {regenOpen && (
-                <div className="mt-4 rounded-xl border bg-white p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">재생성된 후보 {regenTarget ? `- ${regenTarget}` : ""}</p>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          setError(null);
-                          setIsLoading(true);
-                          apiLogger.info(`Section O: force re-generate ${regenTarget}`, { brandName: brandInfo.brand_name });
-                          const context = { existing: brandInfo };
-                          const resp = await (await import("../api/client")).regenerateSectionOField(brandData, context, String(regenTarget));
-                          const c = resp.result?.candidates || [];
-                          setRegenCandidates(Array.isArray(c) ? c : []);
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : "재생성 실패");
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                      className="rounded-full border px-3 py-1 text-sm bg-white"
-                    >
-                      새로 생성
-                    </button>
-                  </div>
-                  <div className="mt-2 grid gap-2">
+              <div className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-stone-900">재생성된 후보 {regenTarget ? `- ${regenTarget}` : ""}</p>
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={async () => {
+                      try {
+                        setError(null);
+                        setIsLoading(true);
+                        apiLogger.info(`Section O: force re-generate ${regenTarget}`, { brandName: brandInfo.brand_name });
+                        
+                        const context = { existing: brandInfo };
+                        const resp = await regenerateSectionOField(brandData, context, String(regenTarget));
+                        const c = resp.result?.candidates || [];
+                        setRegenCandidates(Array.isArray(c) ? c : []);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "재생성 실패");
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    className="rounded-full border px-3 py-1 text-sm bg-stone-50 hover:bg-stone-100 transition disabled:cursor-not-allowed"
+                  >
+                    새로 생성
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2">
                   {regenCandidates.length ? regenCandidates.map((c) => (
-                    <div key={c.text || String(c)} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+                    <div key={c.text || String(c)} className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3 bg-stone-50">
                       <div className="text-sm text-stone-700">
-                        <div>{c.text || String(c)}</div>
-                        {c.rationale ? <div className="text-xs text-stone-500">{c.rationale}</div> : null}
+                        <div className="font-medium text-stone-900">{c.text || String(c)}</div>
+                        {c.rationale ? <div className="mt-1 text-xs text-stone-500">{c.rationale}</div> : null}
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              const mod = await import("../store/brandStore");
-                              const store = mod.useBrandStore.getState();
-                              const newBrand = { ...(brandInfo as any) } as any;
-                              if (regenTarget === "brand_name") {
-                                newBrand.brand_name = c.text || c;
-                              } else if (regenTarget === "name_meaning") {
-                                newBrand.name_meaning = c.text || c;
-                              } else if (regenTarget === "slogan") {
-                                newBrand.slogan = c.text || c;
-                              } else if (regenTarget === "story_summary") {
-                                newBrand.story_summary = c.text || c;
-                              }
-                              store.setBrandInfo(newBrand);
-                              if (regenTarget) {
-                                store.setAppliedSelection("O", regenTarget, c.text || c);
-                              }
-                              setRegenOpen(false);
-                              setRegenCandidates([]);
-                              setRegenTarget(null);
-                            } catch (e) {}
-                          }}
-                          className="rounded-full bg-amber-500 px-3 py-1 text-sm text-white"
-                        >
-                          적용
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            // 💡 불필요한 동적 임포트(await import) 제거
+                            const store = useBrandStore.getState();
+                            const newBrand = { ...(brandInfo as any) } as any;
+                            
+                            if (regenTarget === "brand_name") {
+                              newBrand.brand_name = c.text || c;
+                            } else if (regenTarget === "name_meaning") {
+                              newBrand.name_meaning = c.text || c;
+                            } else if (regenTarget === "slogan") {
+                              newBrand.slogan = c.text || c;
+                            } else if (regenTarget === "story_summary") {
+                              newBrand.story_summary = c.text || c;
+                            }
+                            
+                            store.setBrandInfo(newBrand);
+                            if (regenTarget) {
+                              store.setAppliedSelection("O", regenTarget, c.text || c);
+                            }
+                            
+                            setRegenOpen(false);
+                            setRegenCandidates([]);
+                            setRegenTarget(null);
+                          } catch (e) {
+                            console.error("적용 중 에러 발생:", e);
+                          }
+                        }}
+                        className="shrink-0 rounded-full bg-amber-500 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-amber-600"
+                      >
+                        적용
+                      </button>
                     </div>
-                  )) : <div className="text-sm text-stone-500">후보가 없습니다.</div>}
+                  )) : <div className="text-sm text-stone-500 py-2">후보가 없습니다. 새로 생성 버튼을 눌러주세요.</div>}
                 </div>
               </div>
             )}
