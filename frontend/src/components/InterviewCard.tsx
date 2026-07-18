@@ -21,14 +21,13 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
   const [editingValue, setEditingValue] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
-  const completedRef = useRef(false);
+  
   const saveInterviewSnapshot = useBrandStore((s) => s.saveInterviewSnapshot);
   const getInterviewSnapshot = useBrandStore((s) => s.getInterviewSnapshot);
 
   useEffect(() => {
     setCurrentIndex(0);
     setAnswers([]);
-    completedRef.current = false;
     if (sectionKey && getInterviewSnapshot) {
       try {
         const s = getInterviewSnapshot(sectionKey);
@@ -43,7 +42,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
     }
   }, [questions, sectionKey, getInterviewSnapshot]);
 
-  // 💡 데이터 렌더링 안전장치: questions 변경 시 동기화
   const currentQuestion = useMemo(() => {
     return questions[currentIndex] || questions[0];
   }, [questions, currentIndex]);
@@ -55,14 +53,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
         .join("\n\n"),
     [answers, questions],
   );
-
-  useEffect(() => {
-    if (!questions.length || completedRef.current) return;
-    if (answers.length === questions.length && answers.every(Boolean)) {
-      completedRef.current = true;
-      onComplete(formattedQuestions);
-    }
-  }, [answers, formattedQuestions, onComplete, questions.length]);
 
   if (!questions.length || !currentQuestion) {
     return (
@@ -95,7 +85,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
           const active = answers[currentIndex] === stripped;
 
           return (
-            // 💡 고유 키값 조합: 질문 인덱스 + 옵션 인덱스
             <div key={`${currentIndex}-${idx}`} className="flex items-stretch gap-2">
               <button
                 type="button"
@@ -115,18 +104,6 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
               >
                 {stripped}
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewText(stripped);
-                  setPreviewOpen(true);
-                }}
-                title="미리보기"
-                className="shrink-0 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600 hover:bg-stone-50"
-              >
-                미리보기
-              </button>
             </div>
           );
         })}
@@ -140,7 +117,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
               }}
               className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-4 text-left text-sm leading-6 text-stone-700 transition hover:border-amber-300 hover:bg-amber-50/40"
             >
-              직접 입력 (내 답변 입력)
+              직접 입력
             </button>
           ) : (
             <div className="space-y-2">
@@ -168,81 +145,43 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 >
                   저장
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsEditing(false); setEditingValue(""); }}
-                  className="rounded-full border px-4 py-2 text-sm bg-white"
-                >
-                  취소
-                </button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {answers.length > 0 && (
-        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
-          <p className="font-semibold text-stone-900">현재 응답 기록</p>
-          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap leading-6">{formattedQuestions}</pre>
-        </div>
-      )}
-      
-      {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setPreviewOpen(false)} />
-          <div className="relative z-50 w-[min(900px,90%)] max-h-[80vh] overflow-auto rounded-2xl bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">미리보기</h3>
-              <button className="text-sm text-stone-500" onClick={() => setPreviewOpen(false)}>닫기</button>
-            </div>
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-sm font-medium text-stone-700">선택 항목</p>
-                <div className="mt-2 rounded-lg border border-stone-200 bg-stone-50 p-4 text-stone-800">{previewText}</div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-stone-700">현재 응답 기록</p>
-                <pre className="mt-2 rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 whitespace-pre-wrap">{formattedQuestions}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="mt-3 flex items-center justify-between">
-        <div />
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (currentIndex === 0) return;
-              const prev = Math.max(0, currentIndex - 1);
-              setCurrentIndex(prev);
-              try {
-                sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: prev, user_inputs: userInputs });
-              } catch (e) {}
-            }}
-            className="rounded-full border px-4 py-2 text-sm bg-white"
-          >
-            뒤로
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-                if (!answers[currentIndex]) return;
-                if (currentIndex < questions.length - 1) {
-                  const next = currentIndex + 1;
-                  setCurrentIndex(next);
-                  try {
-                    sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: next, user_inputs: userInputs });
-                  } catch (e) {}
-                }
-            }}
-            className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white"
-          >
-            다음
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (currentIndex === 0) return;
+            const prev = currentIndex - 1;
+            setCurrentIndex(prev);
+          }}
+          className="rounded-full border px-4 py-2 text-sm bg-white"
+        >
+          뒤로
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+              if (!answers[currentIndex]) return;
+              if (currentIndex < questions.length - 1) {
+                const next = currentIndex + 1;
+                setCurrentIndex(next);
+                try {
+                  sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: next, user_inputs: userInputs });
+                } catch (e) {}
+              } else {
+                // 💡 마지막 질문에서 완료 버튼 클릭 시 데이터 전달
+                onComplete(formattedQuestions);
+              }
+          }}
+          className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white"
+        >
+          {currentIndex === questions.length - 1 ? "인터뷰 완료" : "다음"}
+        </button>
       </div>
     </div>
   );
