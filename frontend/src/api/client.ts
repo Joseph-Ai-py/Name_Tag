@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+// 💡 [수정 3] 이중 슬래시 방지: 환경변수 끝에 '/'가 있으면 제거
+const BASE_URL = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 
 // 디버깅 로거
 export const apiLogger = {
@@ -16,10 +17,12 @@ export const apiLogger = {
 
 async function apiPost(endpoint: string, body: unknown) {
   const startTime = performance.now();
-  apiLogger.info(`📤 POST ${endpoint}`, body);
+  // 💡 endpoint가 '/'로 시작하지 않으면 '/'를 붙여 안전하게 결합
+  const safeEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  apiLogger.info(`📤 POST ${safeEndpoint}`, body);
 
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetch(`${BASE_URL}${safeEndpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -27,13 +30,24 @@ async function apiPost(endpoint: string, body: unknown) {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      apiLogger.error(`${endpoint} - Status ${response.status}`, payload);
-      throw new Error(payload.detail || "서버 오류가 발생했습니다.");
+      apiLogger.error(`${safeEndpoint} - Status ${response.status}`, payload);
+      
+      // 💡 [수정 1] FastAPI 배열 에러(422) 완벽 파싱 로직
+      let errorMessage = "서버 오류가 발생했습니다.";
+      if (payload.detail) {
+        if (typeof payload.detail === "string") {
+          errorMessage = payload.detail;
+        } else if (Array.isArray(payload.detail)) {
+          // 배열 형태의 상세 에러를 읽기 쉽게 변환 (예: "brand_info.brand_name : 필드가 누락되었습니다")
+          errorMessage = payload.detail.map((err: any) => `${err.loc?.join('.')} : ${err.msg}`).join('\n');
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    apiLogger.timing(endpoint, startTime);
-    apiLogger.info(`✅ ${endpoint} success`);
+    apiLogger.timing(safeEndpoint, startTime);
+    apiLogger.info(`✅ ${safeEndpoint} success`);
     return data;
   } catch (error) {
     apiLogger.error(`${endpoint} - Network or parse error`, error);
@@ -221,9 +235,15 @@ export async function generatePDF(brandInfo: any, dataA: any, dataB: any, dataC:
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `nametag_${brandInfo.brand_name}_guideline.pdf`;
+    document.body.appendChild(anchor); // DOM에 붙여야 확실하게 작동하는 브라우저들 대비
     anchor.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(anchor);
     
+    // 💡 [수정 2] 다운로드가 시작되기도 전에 메모리에서 삭제되어버리는 버그 방지 (1초 대기 후 해제)
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
     apiLogger.info(`💾 PDF 다운로드 완료: ${anchor.download}`);
   } catch (error) {
     apiLogger.error("PDF 생성/다운로드 중 오류", error);
