@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { generateSectionC, getCInterview, regenerateSectionCField } from "../api/client";
 import { apiLogger } from "../api/client";
@@ -28,6 +28,11 @@ export function SectionC() {
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenTarget, setRegenTarget] = useState<string | null>(null);
 
+  const handleComplete = useCallback((formattedText: string) => {
+    apiLogger.info("Section C: interview text stored", { length: formattedText.length });
+    setInterviewDataC(formattedText);
+  }, [setInterviewDataC]);
+
   if (!brandInfo) {
     return <PageFrame eyebrow="Section C" title="브랜드 정보가 필요합니다" description="먼저 Section O에서 브랜드 후보를 확정해야 합니다." />;
   }
@@ -50,7 +55,7 @@ export function SectionC() {
           <button
             type="button"
             onClick={() => setCurrentStep(4)}
-            disabled={!dataC}
+            disabled={!dataC || Object.keys(dataC).length === 0}
             className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300"
           >
             다음 단계
@@ -63,7 +68,10 @@ export function SectionC() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
+            disabled={isLoading}
             onClick={async () => {
+              setQuestions([]);
+              setReasoning("");
               try {
                 setError(null);
                 setIsLoading(true);
@@ -78,13 +86,16 @@ export function SectionC() {
                 setIsLoading(false);
               }
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600"
+            className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition ${
+              isLoading ? "bg-stone-300 cursor-not-allowed text-stone-500" : "bg-amber-500 hover:bg-amber-600 text-white"
+            }`}
           >
             <Sparkles size={16} />
-            인터뷰 시작
+            {isLoading ? "인터뷰 생성 중..." : "인터뷰 시작"}
           </button>
           <button
             type="button"
+            disabled={isLoading}
             onClick={async () => {
               try {
                 setError(null);
@@ -96,36 +107,36 @@ export function SectionC() {
                   interviewCLength: interviewDataC.length,
                 });
                 const response = await generateSectionC(brandInfo, interviewDataA, interviewDataB, interviewDataC);
-                apiLogger.info("Section C: generate response", { keys: Object.keys(response.data_c || {}) });
-                setDataC(response.data_c || {});
+                const finalData = response.data_c || response.data || response;
+                apiLogger.info("Section C: generate response", { keys: Object.keys(finalData || {}) });
+                setDataC(finalData || {});
               } catch (error) {
                 setError(error instanceof Error ? error.message : "Section C 생성 실패");
               } finally {
                 setIsLoading(false);
               }
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-amber-300 hover:bg-amber-50/40"
+            className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-semibold transition ${
+              isLoading ? "bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed" : "border-stone-200 bg-white text-stone-800 hover:border-amber-300 hover:bg-amber-50/40"
+            }`}
           >
-            생성 시작
+            {isLoading ? "생성 중..." : "생성 시작"}
           </button>
         </div>
 
         {isLoading && <LoadingSpinner label="C 섹션을 생성 중입니다..." />}
         {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        {questions.length > 0 && (
+        {Array.isArray(questions) && questions.length > 0 && (
           <InterviewCard
             sectionKey="C"
             questions={questions}
             reasoning={reasoning}
-            onComplete={(formattedText) => {
-              apiLogger.info("Section C: interview text stored", { length: formattedText.length });
-              setInterviewDataC(formattedText);
-            }}
+            onComplete={handleComplete}
           />
         )}
 
-        {dataC && (
+        {dataC && Object.keys(dataC).length > 0 && (
           <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 space-y-6">
             <div>
               <p className="font-semibold text-stone-900 mb-4">🎨 생성 결과</p>
@@ -150,6 +161,8 @@ export function SectionC() {
                 }}
               />
             </div>
+            
+            {/* Regen Modal UI가 필요한 경우 여기에 추가 구현 */}
           </div>
         )}
       </div>
