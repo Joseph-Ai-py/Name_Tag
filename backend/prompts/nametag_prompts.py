@@ -773,15 +773,22 @@ def get_logo_image_prompt(
     deepdive_answers_text: str,
     data_c: dict,
 ) -> str:
-    # data_c에서 로고에 필요한 값만 추출
-    palette = data_c["color_palette"]
-    hex_by_role = {c["role"]: c["hex_code"] for c in palette}
-    color_palette = ", ".join(
-        hex_by_role[r] for r in ("Primary", "Secondary", "Accent") if r in hex_by_role
-    )
+    # 💡 [보강] 방어적 색상 추출: role이 일치하지 않아도 안전하게 추출
+    palette = data_c.get("color_palette", [])
+    
+    # role 키가 없는 경우도 대비하여 role.lower() 비교
+    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
+    
+    # 우선순위 부여: primary -> secondary -> accent 순으로 찾고 없으면 기본값
+    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
+    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
 
-    mood_keywords = ", ".join(data_c["visual_mood_guide"]["mood_keywords"])
-    layout_hint = data_c["design_principles"]["layout_direction"]
+    # 무드 키워드/레이아웃도 방어적 접근
+    mood_guide = data_c.get("visual_mood_guide", {})
+    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["minimal", "professional"]))
+    
+    design_prin = data_c.get("design_principles", {})
+    layout_hint = design_prin.get("layout_direction", "Balanced and centered composition")
 
     return f"""당신은 세계적 수준의 브랜드 아이덴티티(BI) 디자이너입니다.
 아래 브랜드를 위한 심볼/엠블럼 하나를 완성해 주세요.
@@ -814,24 +821,73 @@ def get_logo_image_prompt(
 - 어떤 형태의 문자, 알파벳, 숫자, 기호도 이미지 안에 그리지 마세요.
 
 [목적]
-전문 브랜딩 에이전시 포트폴리오에 들어갈 수준의, 독립적으로 쓸 수 있는 심볼/엠블럼입니다.
+- '전문 디자이너의 포트폴리오 메인 작품'으로 사용될 로고입니다.
+- AI가 그리는 로고가 아니라, Adobe Illustrator로 정교하게 벡터화한 로고처럼 선명하게 디자인하세요.
+- 불필요한 장식은 모두 제거하고, 오직 '심볼의 기하학적 형태'와 '브랜드가 지향하는 감정'만을 강렬한 대비로 표현하세요.
 """
 
 
-def get_character_image_prompt(brand_name: str, char_name: str, char_appearance: str) -> str:
+def get_character_image_prompt(
+    brand_name: str,
+    char_name: str,
+    char_appearance: str,
+    symbolic_value: str,
+    emotional_connection: str,
+    brand_info: dict,              # 추가됨
+    deepdive_answers_text: str,    # 추가됨
+    data_c: dict,
+) -> str:
+    # 💡 [보강] 로고 생성 로직과 동일하게 방어적 색상 추출
+    palette = data_c.get("color_palette", [])
+    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
+    
+    # Primary/Secondary/Accent가 없을 경우에 대한 대비
+    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
+    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
+    
+    # 💡 방어적 무드 키워드 추출
+    mood_guide = data_c.get("visual_mood_guide", {})
+    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["friendly", "professional"]))
+
     return f"""당신은 세계적인 수준의 브랜드 캐릭터(마스코트) 전문 일러스트레이터입니다.
 다음 지시사항에 따라 브랜드를 대변할 매력적인 캐릭터를 디자인해 주세요.
 
 [브랜드명]: {brand_name}
+[확정된 최종 브랜드 조합]: {brand_info}
+[심층 인터뷰 결과]: {deepdive_answers_text}
 [캐릭터 이름]: {char_name}
 [캐릭터 외형 묘사]: {char_appearance}
+[캐릭터가 상징하는 가치]: {symbolic_value}
+[고객과의 감정적 연결]: {emotional_connection}
 
-[엄격한 품질 및 스타일 요구사항]
-- 스타일: 브랜드 로고와 시각적 일관성을 갖춘 깔끔한 2D 벡터 일러스트레이션 또는 매우 정제된 캐릭터 아트.
-- 구도: 캐릭터의 전신이나 상반신이 중앙에 명확하게 배치된 프로필 샷.
-- 배경: 완벽한 순백색(Solid White, #FFFFFF) 배경.
-- 표현: 타겟 고객이 호감을 느낄 수 있는 친근하고 호소력 있는 표정과 동세.
-- 텍스트 제어: 이미지 안에 어떤 텍스트나 글자도 포함하지 말 것.
+[브랜드 톤앤매너]
+- 무드: {mood_keywords}
+- 컬러: 다음 색상만 사용: {color_palette}
+
+[조형 스타일]
+- 로고와 동일한 브랜드 룩을 유지하는 professional flat vector illustration
+- 균일한 두께의 선, 그라데이션·텍스처·사실적 음영 없이 solid color로만 표현
+- 가장자리는 흐트러짐 없이 선명하고 매끈하게 (clean vector edges)
+
+[구도]
+- 캐릭터의 전신이나 상반신이 중앙에 명확하게 배치된 프로필 샷
+- 사방에 충분한 여백을 확보한 독립적인 형태 (iconography style)
+
+[배경 및 마감]
+- 배경은 완전한 순백색(Solid White, #FFFFFF)
+- 스케치·붓터치·워터마크·서명 없음
+
+[표현]
+- 위에서 정의한 상징적 가치와 감정적 연결이 표정과 자세에서 드러나도록 표현
+- 타겟 고객이 호감을 느낄 수 있는 친근하고 호소력 있는 인상
+
+[텍스트 금지]
+- 이미지 안에 어떤 텍스트나 글자, 기호도 포함하지 마세요.
+
+[목적]
+- 전문 브랜딩 에이전시 포트폴리오에 즉시 사용 가능한, 높은 상업적 가치를 지닌 캐릭터 디자인입니다.
+- AI가 생성한 무작위 그림이 아니라, Adobe Illustrator로 정교하게 설계된 벡터 마스코트처럼 완벽한 비례와 선명한 라인을 가져야 합니다.
+- 불필요한 장식은 모두 제거하고, 오직 캐릭터의 표정과 상징적 가치가 강렬한 대비를 통해 드러나도록 디자인하세요.
 """
 
 
@@ -893,6 +949,22 @@ def get_C1_visual_identity_prompt(
 
 def get_DE_interview_prompt(brand_info: dict[str, Any], interview_data_c: str) -> str:
     return f"""확정된 브랜드 조합과 C단계 결과를 바탕으로 로고와 캐릭터를 설계할 준비를 하고 있습니다.
+
+로고 심볼과 캐릭터를 실제로 그리기 위해 반드시 필요한 조형적 결정사항을 질문으로 만드세요.
+특히 아래 항목은 이미지 생성 품질에 직접적인 영향을 주므로, 최소 1개 질문으로 반드시 포함하세요.
+
+- 심볼의 선 두께/무게감 (예: 얇고 정교한 선 vs 굵고 힘 있는 선)
+- 심볼의 조형 원리 (예: 곡선/직선/기하학적 형태)
+- 캐릭터의 성격과 감정적 톤
+
+C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되는 질문은 만들지 마세요.
+
+위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
+
+[엄격한 제약 사항]
+- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
+- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
+- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
 
 [확정된 최종 브랜드 조합]
 {brand_info}
