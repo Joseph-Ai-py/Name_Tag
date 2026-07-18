@@ -10,7 +10,7 @@ def get_absolute_path(url_path):
     if not url_path:
         return None
         
-    if url_path.startswith('/assets/'):
+    if url_path.startswith('/assets/'):8
         # 현재 파일(builder.py) 위치를 기준으로 프로젝트 최상위 폴더 찾기
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         # base_dir과 url_path를 안전하게 결합
@@ -1385,18 +1385,14 @@ def build_c3_visual_mood(C_data):
 
 # [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 + Section D-2. 로고 사용 가이드
 def build_d_logo_identity(data_D, logo_image_path=None):
-    # candidates 껍질이 있는지 확인하고 안전하게 벗겨냄
-    if data_D and 'candidates' in data_D and len(data_D['candidates']) > 0:
-        data_D = data_D['candidates'][0]
-
-    # 로고 데이터의 위치 자동 추적
-    # 스키마 강제로 인해 'logo_identity' 안에 들어있으면 꺼내고, 옛날처럼 밖에 있으면 그냥 씁니다.
+    # 1. Root 레벨에서 데이터를 먼저 찾음 (데이터가 껍질에 싸여있는지 여부 판단)
     logo_data = data_D.get('logo_identity', data_D)
+    
+    # 2. 만약 logo_identity가 없더라도 concept/guide가 바로 Root에 있다면 거기서 가져옴
+    concept = logo_data.get('concept', data_D.get('concept', {}))
+    guide = logo_data.get('guide', data_D.get('guide', {}))
 
-    concept = logo_data.get('concept', {}) 
-    guide = logo_data.get('guide', {})
-
-    # 데이터 추출
+    # 3. 데이터 추출 (방어적)
     symbol_reason = e(concept.get('symbol_reason', ''))
     color_reason = e(concept.get('color_reason', ''))
     overall_message = e(concept.get('overall_message', '')).replace('\n', '<br>')
