@@ -640,34 +640,6 @@ def get_C3_visual_mood_prompt(brand_info: dict[str, Any], deepdive_answers_text:
 }}"""
 
 
-def get_DE_interview_prompt(brand_info: dict[str, Any]) -> str:
-    return f"""확정된 브랜드 조합을 바탕으로 로고와 캐릭터를 설계할 준비를 하고 있습니다.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
-
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "required_question_count": 1,
-  "reasoning": "로고와 캐릭터를 구체화하기 위해 필요한 핵심 질문 1개를 생성했습니다.",
-  "questions": [
-    {{
-      "question_id": 1,
-      "question_text": "이 브랜드의 로고와 캐릭터가 전달해야 할 핵심 인상은 무엇입니까?",
-      "options": ["1. 고급스럽고 절제된 인상", "2. 친근하고 따뜻한 인상", "3. 자연스럽고 안정적인 인상", "4. 감각적이고 실험적인 인상"]
-    }}
-  ]
-}}"""
-
-
 def get_D_logo_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
     return f"""브랜드 로고 아이덴티티를 설계하세요.
 
@@ -826,7 +798,6 @@ def get_logo_image_prompt(
 - 불필요한 장식은 모두 제거하고, 오직 '심볼의 기하학적 형태'와 '브랜드가 지향하는 감정'만을 강렬한 대비로 표현하세요.
 """
 
-
 def get_character_image_prompt(
     brand_name: str,
     char_name: str,
@@ -973,15 +944,24 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
 {interview_data_c}
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
-
 {{
-  "required_question_count": 1,
-  "reasoning": "로고와 캐릭터를 구체화하기 위해 필요한 핵심 질문 1개를 생성했습니다.",
+  "required_question_count": 3,
+  "reasoning": "로고 심볼의 선 두께와 조형 원리, 캐릭터의 성격을 구체화하기 위해 핵심 질문 3개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
-      "question_text": "이 브랜드의 로고와 캐릭터가 전달해야 할 핵심 인상은 무엇입니까?",
-      "options": ["1. 고급스럽고 절제된 인상", "2. 친근하고 따뜻한 인상", "3. 자연스럽고 안정적인 인상", "4. 감각적이고 실험적인 인상"]
+      "question_text": "로고 심볼의 선은 어떤 두께와 무게감을 가져야 합니까?",
+      "options": ["1. 얇고 섬세한 선으로 정교함을 강조", "2. 균일한 중간 두께로 안정감을 강조", "3. 굵고 힘 있는 선으로 존재감을 강조", "4. 선 대신 solid shape 위주의 면 구성"]
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "심볼의 조형 원리에서 가장 우선시되는 형태는 무엇입니까?",
+      "options": ["1. 절제된 기하학적 도형", "2. 유기적이고 부드러운 곡선", "3. 정적인 수평/수직 구조", "4. 리듬감 있는 반복 패턴"]
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "브랜드 캐릭터가 전달해야 할 핵심 감정적 인상은 무엇입니까?",
+      "options": ["1. 고요하고 신뢰감 있는 인상", "2. 따뜻하고 친근한 인상", "3. 지적이고 세련된 인상", "4. 신비롭고 몽환적인 인상"]
     }}
   ]
 }}"""
