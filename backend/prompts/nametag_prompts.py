@@ -766,8 +766,23 @@ def get_logo_variables_prompt(business_type: str, vibes: list[str], target: str,
   "recommendations_reason": "이 변수들을 추천한 이유 2-3문장"
 }}"""
 
+def get_logo_image_prompt(
+    brand_name: str,
+    direction_text: str,
+    brand_info: dict,
+    deepdive_answers_text: str,
+    data_c: dict,
+) -> str:
+    # data_c에서 로고에 필요한 값만 추출
+    palette = data_c["color_palette"]
+    hex_by_role = {c["role"]: c["hex_code"] for c in palette}
+    color_palette = ", ".join(
+        hex_by_role[r] for r in ("Primary", "Secondary", "Accent") if r in hex_by_role
+    )
 
-def get_logo_image_prompt(brand_name: str, direction_text: str) -> str:
+    mood_keywords = ", ".join(data_c["visual_mood_guide"]["mood_keywords"])
+    layout_hint = data_c["design_principles"]["layout_direction"]
+
     return f"""당신은 세계적 수준의 브랜드 아이덴티티(BI) 디자이너입니다.
 아래 브랜드를 위한 심볼/엠블럼 하나를 완성해 주세요.
 텍스트나 글자는 이미지에 절대 포함하지 마세요. 심볼 그래픽만 생성합니다.
@@ -778,6 +793,13 @@ def get_logo_image_prompt(brand_name: str, direction_text: str) -> str:
 
 [브랜드명]: {brand_name}
 [디자인 핵심 방향성]: {direction_text}
+
+[조형 스타일]
+- 구도 원칙: {layout_hint}
+- 무드: {mood_keywords}
+
+[컬러]
+- 다음 색상만 사용: {color_palette}
 
 [구성]
 - 심볼이 캔버스 중앙에 오도록, 사방에 충분한 여백을 확보
