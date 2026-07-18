@@ -113,13 +113,18 @@ async def generate_logo_only(req: DEGenerateRequest):
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
         print(f"[DEBUG] DE 단독 로고 생성 요청 시작...", flush=True)
 
-        # 단독 로고 생성 시에도 텍스트 구조 누락 방지를 위해 스키마 적용
         result = request_gemini_with_schema(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
             schema=DEResponseSchema
         )
 
-        logo_path = generate_logo_image(brand["brand_name"], result)
+        logo_path = generate_logo_image(
+            brand_name=brand["brand_name"],
+            result=result,
+            data_c=req.data_c,
+            brand_info=brand,
+            deepdive_answers_text=req.interview_data_de,  # DE 인터뷰 답변 = 로고 전용 인터뷰
+        )
         result["logo_path"] = to_url_path(logo_path)
 
         print(f"[DEBUG] 단독 로고 생성 완료: {result['logo_path']}", flush=True)
