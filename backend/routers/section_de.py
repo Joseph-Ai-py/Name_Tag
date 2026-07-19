@@ -90,20 +90,22 @@ async def generate_section_de(req: DEGenerateRequest):
         print(f"[DEBUG] 로고 및 캐릭터 이미지 생성 시작...", flush=True)
 
         logo_path = generate_logo_image(
-    brand_name=brand["brand_name"],
-    de_section_data=result,
-            deepdive_answers_text=req.interview_data_de,
+            brand_name=brand["brand_name"],
+            de_section_data=result,
+            brand_info=brand,
+            data_c=req.data_c,
+            deepdive_answers_text=req.interview_data_de
         )
 
         intro = result["character_guide"]["intro"]
         reasoning = result["character_guide"]["reasoning"]
+
         char_path = generate_character_image(
             brand_name=brand["brand_name"],
-            char_name=intro["name"],
-            char_appearance=intro["appearance"],
-            symbolic_value=intro["symbolic_value"],
-            emotional_connection=reasoning["emotional_connection"],
+            de_section_data=result,
+            brand_info=brand,
             data_c=req.data_c,
+            deepdive_answers_text=req.interview_data_de
         )
 
         print(f"[DEBUG] section-de images generated - logo_path={logo_path}, char_path={char_path}", flush=True)
@@ -125,20 +127,20 @@ async def generate_logo_only(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
-        print(f"[DEBUG] DE 단독 로고 생성 요청 시작...", flush=True)
-
         result = request_gemini_with_schema(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
             schema=DEResponseSchema
         )
+        print(f"[DEBUG] DE 단독 로고 생성 요청 시작...", flush=True)
 
         logo_path = generate_logo_image(
     brand_name=brand["brand_name"],
     de_section_data=result,
-            deepdive_answers_text=req.interview_data_de,
-        )
+    brand_info=brand,
+    data_c=req.data_c,
+    deepdive_answers_text=req.interview_data_de
+)
         result["logo_path"] = to_url_path(logo_path)
-
         print(f"[DEBUG] 단독 로고 생성 완료: {result['logo_path']}", flush=True)
         return {"logo_path": result["logo_path"], "data_de": result}
     except Exception as exc:
@@ -151,29 +153,25 @@ async def generate_character_only(req: DEGenerateRequest):
     try:
         brand = req.brand_info.model_dump()
         previous_context = f"{req.interview_data_a} + {req.interview_data_b} + {req.interview_data_c}"
-        print(f"[DEBUG] DE 단독 캐릭터 생성 요청 시작...", flush=True)
-
         result = request_gemini_with_schema(
             get_DE_identity_prompt(brand, req.data_c, previous_context, req.interview_data_de),
             schema=DEResponseSchema
         )
+        print(f"[DEBUG] DE 단독 캐릭터 생성 요청 시작...", flush=True)
 
-        intro = result["character_guide"]["intro"]
-        reasoning = result["character_guide"]["reasoning"]
         char_path = generate_character_image(
             brand_name=brand["brand_name"],
-            char_name=intro["name"],
-            char_appearance=intro["appearance"],
-            symbolic_value=intro["symbolic_value"],
-            emotional_connection=reasoning["emotional_connection"],
+            de_section_data=result,
+            brand_info=brand,
             data_c=req.data_c,
+            deepdive_answers_text=req.interview_data_de
         )
+
         result["char_path"] = to_url_path(char_path)
 
         print(f"[DEBUG] 단독 캐릭터 생성 완료: {result['char_path']}", flush=True)
         return {"char_path": result["char_path"], "data_de": result}
     except Exception as exc:
-        print(f"[FATAL ERROR] /generate-character 실행 중 에러 발생: {str(exc)}", flush=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
 
