@@ -135,10 +135,8 @@ async def generate_logo_only(req: DEGenerateRequest):
         )
 
         logo_path = generate_logo_image(
-            brand_name=brand["brand_name"],
-            result=result,
-            data_c=req.data_c,
-            brand_info=brand,
+    brand_name=brand["brand_name"],
+    de_section_data=result,
             deepdive_answers_text=req.interview_data_de,
         )
         result["logo_path"] = to_url_path(logo_path)
