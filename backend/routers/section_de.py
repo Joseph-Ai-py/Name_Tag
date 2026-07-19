@@ -90,10 +90,8 @@ async def generate_section_de(req: DEGenerateRequest):
         print(f"[DEBUG] 로고 및 캐릭터 이미지 생성 시작...", flush=True)
 
         logo_path = generate_logo_image(
-            brand_name=brand["brand_name"],
-            result=result,
-            data_c=req.data_c,
-            brand_info=brand,
+    brand_name=brand["brand_name"],
+    de_section_data=result,
             deepdive_answers_text=req.interview_data_de,
         )
 
