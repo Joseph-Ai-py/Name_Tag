@@ -10,7 +10,7 @@ def get_absolute_path(url_path):
     if not url_path:
         return None
         
-    if url_path.startswith('/assets/'):8
+    if url_path.startswith('/assets/'):
         # 현재 파일(builder.py) 위치를 기준으로 프로젝트 최상위 폴더 찾기
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         # base_dir과 url_path를 안전하게 결합
