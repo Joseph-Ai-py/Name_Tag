@@ -1385,9 +1385,13 @@ def build_c3_visual_mood(C_data):
 
 # [Page 15] Section D-1. 로고 아이덴티티 & 컨셉 + Section D-2. 로고 사용 가이드
 def build_d_logo_identity(data_D, logo_image_path=None):
-    # 1. Root 레벨에서 데이터를 먼저 찾음 (데이터가 껍질에 싸여있는지 여부 판단)
+    # Section E와 동일하게 candidates 껍질이 있다면 안전하게 벗겨냅니다.
+    if data_D and 'candidates' in data_D and len(data_D['candidates']) > 0:
+        data_D = data_D['candidates'][0]
+
+    # 1. Root 레벨에서 데이터를 먼저 찾음
     logo_data = data_D.get('logo_identity', data_D)
-    
+
     # 2. 만약 logo_identity가 없더라도 concept/guide가 바로 Root에 있다면 거기서 가져옴
     concept = logo_data.get('concept', data_D.get('concept', {}))
     guide = logo_data.get('guide', data_D.get('guide', {}))
