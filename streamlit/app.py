@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import streamlit.components.v1 as components
+from pdf_service import build_download_filename, generate_pdf_bytes, generate_a_only_html
+
 import json
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -99,7 +103,6 @@ def render_sidebar_navigation() -> None:
             reset_workflow_state()
             st.rerun()
 
-
 # -----------------------------
 # 인터뷰 카드 렌더
 # -----------------------------
@@ -107,6 +110,39 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
     questions = question_pack.get("questions") or []
     if not questions:
         return
+
+    # --- 🎨 커스텀 CSS 주입 ---
+    # 선택된 버튼(primary)의 배경색을 지우고, 테마에 맞는 텍스트 색상(var(--text-color))으로 테두리를 칠합니다.
+    # 라이트모드에서는 검은색 계열, 다크모드에서는 흰색 계열로 자동 변경됩니다.
+    st.markdown(
+        """
+        <style>
+        /* 확실한 색상을 직접 주입하여 눈이 편안한 꽉 찬 버튼으로 만듭니다 */
+        button[kind="primary"] {
+            background-color: #5C6B73 !important; /* 차분한 블루 그레이 색상 */
+            border: 1px solid #5C6B73 !important;
+            border-radius: 8px !important;        /* 모서리를 살짝 둥글게 */
+        }
+        
+        /* 버튼 내부 글자 색상 강제 고정 */
+        button[kind="primary"] p {
+            color: #FFFFFF !important;            /* 글자는 무조건 흰색 */
+            font-weight: bold !important;
+        }
+
+        button[kind="primary"]:hover {
+            background-color: #4A565C !important; /* 마우스를 올리면 살짝 더 어두워짐 */
+            border: 1px solid #4A565C !important;
+        }
+        
+        button[kind="primary"]:active {
+            background-color: #384247 !important; /* 클릭 시 더 진한 색상으로 타격감 추가 */
+            border: 1px solid #384247 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     answers_key = f"{section}_answers"
     idx_key = f"{section}_current_idx"
@@ -134,9 +170,14 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
         for i, option in enumerate(options):
             stripped = _strip_option_prefix(str(option))
             target_col = col1 if i % 2 == 0 else col2
-            if target_col.button(stripped, key=f"{section}_opt_{current_idx}_{i}", use_container_width=True):
+            
+            is_selected = (answers[current_idx] == stripped)
+            button_type = "primary" if is_selected else "secondary"
+            
+            if target_col.button(stripped, key=f"{section}_opt_{current_idx}_{i}", use_container_width=True, type=button_type):
                 answers[current_idx] = stripped
                 set_state(answers_key, answers)
+                st.rerun()
 
         st.text_input(
             "직접 입력(선택)",
@@ -153,6 +194,7 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
                 set_state(answers_key, answers)
                 set_state(custom_key, value)
                 st.success("현재 질문 답변으로 저장했습니다.")
+                st.rerun()
 
         if c2.button("이전", key=f"{section}_prev", use_container_width=True, disabled=current_idx == 0):
             set_state(idx_key, current_idx - 1)
@@ -235,6 +277,34 @@ def _render_regen_panel(
 # -----------------------------
 def render_step_o() -> None:
     st.header("Section O - 브랜드 초안 입력과 MVB 선택")
+    
+    # --- 🎨 커스텀 CSS 주입 ---
+    # 브랜드 감성 선택 버튼(primary)을 다크모드/라이트모드에 맞춰 테두리만 표시되도록 스타일 변경
+    st.markdown(
+        """
+        <style>
+        /* 확실한 색상을 직접 주입하여 눈이 편안한 꽉 찬 버튼으로 만듭니다 */
+        button[kind="primary"] {
+            background-color: #5C6B73 !important; /* 차분한 블루 그레이 색상 */
+            border: 1px solid #5C6B73 !important;
+            border-radius: 8px !important;        /* 모서리를 살짝 둥글게 */
+        }
+        
+        /* 버튼 내부 글자 색상 강제 고정 */
+        button[kind="primary"] p {
+            color: #FFFFFF !important;            /* 글자는 무조건 흰색 */
+            font-weight: bold !important;
+        }
+
+        button[kind="primary"]:hover {
+            background-color: #4A565C !important; /* 마우스를 올리면 살짝 더 어두워짐 */
+            border: 1px solid #4A565C !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     _render_error()
 
     raw = get_state("brand_data") or {}
@@ -247,14 +317,44 @@ def render_step_o() -> None:
         target = st.text_input("타겟 고객", value=raw.get("target", ""), placeholder="예: 감도 높은 20~30대")
 
     keywords = st.text_input("추가 키워드", value=raw.get("keywords", ""), placeholder="예: 지속가능성, 감성, 세련됨")
-    vibes = st.multiselect("브랜드 감성", options=vibe_options, default=raw.get("vibes", []))
 
+    # --- 감성 키워드 버튼형 선택 UI ---
+    st.markdown("**브랜드 감성 (최대 4개 선택)**")
+    
+    current_vibes = raw.get("vibes", [])
+    if not isinstance(current_vibes, list):
+        current_vibes = []
+        
+    # 4개의 열을 만들어 버튼을 격자 형태로 배치
+    cols = st.columns(4)
+    for i, vibe in enumerate(vibe_options):
+        col = cols[i % 4]
+        is_selected = vibe in current_vibes
+        
+        # 선택된 상태면 'primary', 아니면 'secondary'
+        button_type = "primary" if is_selected else "secondary"
+        
+        # 4개가 이미 선택되었고, 현재 버튼이 선택되지 않은 버튼이라면 비활성화
+        is_disabled = (not is_selected) and (len(current_vibes) >= 4)
+        
+        if col.button(vibe, key=f"vibe_btn_{vibe}", use_container_width=True, type=button_type, disabled=is_disabled):
+            if is_selected:
+                current_vibes.remove(vibe)
+            else:
+                current_vibes.append(vibe)
+                
+            raw["vibes"] = current_vibes
+            set_state("brand_data", raw)
+            st.rerun()
+
+    vibes = current_vibes
     brand_data = BrandData(business_type=business_type, target=target, keywords=keywords, vibes=vibes)
     set_state("brand_data", brand_data.model_dump())
 
     can_interview = len(business_type.strip()) > 1 and len(target.strip()) > 1
     can_generate_candidates = len((get_state("interview_data_o") or "").strip()) > 0
 
+    st.markdown("<br>", unsafe_allow_html=True) # 여백 추가
     b1, b2, b3 = st.columns(3)
     if b1.button("인터뷰 시작", disabled=not can_interview, use_container_width=True):
         try:
@@ -380,24 +480,16 @@ def render_step_a() -> None:
         render_interview_card("A", qpack, "interview_data_a")
 
     if get_state("data_a"):
-        st.subheader("생성 결과")
-        st.json(get_state("data_a"))
-        _render_regen_panel(
-            section="A",
-            target_keys=["brand_name", "name_meaning", "slogan", "story_summary"],
-            regenerate_fn=regenerate_a_field,
-            context_data=get_state("data_a") or {},
-            brand_info=brand_info,
-            apply_target_data_key="data_a",
-        )
-
-    n1, n2 = st.columns(2)
-    if n1.button("이전: O", use_container_width=True):
-        set_state("current_step", 0)
-        st.rerun()
-    if n2.button("다음: B", disabled=get_state("data_a") is None, use_container_width=True):
-        set_state("current_step", 2)
-        st.rerun()
+        st.subheader("생성 결과 미리보기")
+        
+        try:
+            html_content = generate_a_only_html(brand_info.model_dump(), get_state("data_a"))
+            
+            components.html(html_content, height=800, scrolling=True)
+            
+        except Exception as exc:
+            st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
+            st.json(get_state("data_a"))
 
 
 def render_step_b() -> None:
