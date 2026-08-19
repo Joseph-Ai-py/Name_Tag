@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import streamlit.components.v1 as components
-from pdf_service import build_download_filename, generate_pdf_bytes, generate_a_only_html
+from pdf_service import build_download_filename, generate_pdf_bytes, generate_o_only_html, generate_a_only_html, generate_b_only_html, generate_c_only_html, generate_de_only_html
 
 import json
 import base64
@@ -81,25 +81,214 @@ def _render_progress_header() -> None:
 
     progress = (current_step + 1) / len(STEP_LABELS)
     st.progress(progress)
+    
+    # --- 텍스트 대신 클릭 가능한 이동 버튼으로 변경 ---
     cols = st.columns(len(STEP_LABELS))
     for idx, col in enumerate(cols):
-        active = "[현재]" if idx == current_step else ""
-        col.markdown(f"**{STEP_LABELS[idx]}**\n\n{STEP_TITLES[idx]} {active}")
+        # 현재 스텝이면 우리가 꾸며둔 primary(블루그레이) 적용, 아니면 일반 secondary
+        button_type = "primary" if idx == current_step else "secondary"
+        
+        # 버튼 텍스트 예: "O (브랜드 초안)"
+        btn_label = f"{STEP_LABELS[idx]}" 
+        if col.button(btn_label, key=f"top_nav_{idx}", use_container_width=True, type=button_type):
+            set_state("current_step", idx)
+            st.rerun()
 
 
-def render_sidebar_navigation() -> None:
+def render_sidebar_editor() -> None:
     with st.sidebar:
-        st.header("탐색")
+        st.header("📝 직접 수정하기")
+        st.caption("수정 후 저장하면 메인 화면의 미리보기에 즉시 반영됩니다.")
+        
         current_step = int(get_state("current_step") or 0)
-        st.caption(f"현재 단계: {STEP_LABELS[current_step]} - {STEP_TITLES[current_step]}")
+        
+        # ==========================================
+        # [Section O] 브랜드 기본 정보 수정
+        # ==========================================
+        if current_step == 0:
+            brand_info = get_state("brand_info")
+            if brand_info:
+                st.subheader("Section O 필드")
+                new_name = st.text_input("브랜드명", value=brand_info.get("brand_name", ""))
+                new_meaning = st.text_area("의미", value=brand_info.get("name_meaning", ""), height=100)
+                new_slogan = st.text_area("슬로건", value=brand_info.get("slogan", ""), height=100)
+                
+                # --- 🎨 색상 조절(Color Picker) 추가 ---
+                # 주의: st.color_picker는 반드시 '#RRGGBB' 형태의 HEX 코드를 요구합니다.
+                raw_color = str(brand_info.get("seed_color", "#000000")).strip()
+                # AI가 가끔 색상 코드가 아닌 글자를 줄 때 앱이 멈추는 것을 방지하는 안전 코드
+                if not raw_color.startswith("#") or len(raw_color) != 7:
+                    raw_color = "#000000"
+                
+                new_color = st.color_picker("브랜드 컬러 (Seed Color)", value=raw_color)
+                # --------------------------------------
 
-        for idx, label in enumerate(STEP_LABELS):
-            if st.button(f"{label} 이동", use_container_width=True, key=f"nav_{label}"):
-                set_state("current_step", idx)
-                st.rerun()
+                if st.button("Section O 저장", use_container_width=True, type="primary"):
+                    brand_info["brand_name"] = new_name
+                    brand_info["name_meaning"] = new_meaning
+                    brand_info["slogan"] = new_slogan
+                    brand_info["seed_color"] = new_color # 🌟 변경된 색상 저장 로직 추가
+                    
+                    set_state("brand_info", brand_info)
+                    st.success("저장 완료!")
+                    st.rerun()
+            else:
+                st.info("아직 조합이 확정되지 않았습니다.")
 
+        # ==========================================
+        # [Section A] 철학, 미션/비전 수정
+        # ==========================================
+        elif current_step == 1:
+            data_a = get_state("data_a")
+            if data_a:
+                st.subheader("Section A 필드")
+                
+                # 🌟 데이터 껍질 안전하게 벗기기
+                target_a = data_a.get("data_a", data_a) if isinstance(data_a, dict) else data_a
+                
+                phil = target_a.get("brand_philosophy", {})
+                ci = target_a.get("core_identity", {})
+                
+                new_manifesto = st.text_area("Manifesto (철학 선언문)", value=phil.get("manifesto", ""), height=150)
+                new_mission = st.text_area("Mission (사명)", value=ci.get("mission", ""), height=100)
+                new_vision = st.text_area("Vision (비전)", value=ci.get("vision", ""), height=100)
+                
+                if st.button("Section A 저장", use_container_width=True, type="primary"):
+                    target_a.setdefault("brand_philosophy", {})["manifesto"] = new_manifesto
+                    target_a.setdefault("core_identity", {})["mission"] = new_mission
+                    target_a.setdefault("core_identity", {})["vision"] = new_vision
+                    
+                    # 🌟 껍질 유지하며 덮어쓰기
+                    if isinstance(data_a, dict) and "data_a" in data_a:
+                        data_a["data_a"] = target_a
+                    else:
+                        data_a = target_a
+                        
+                    set_state("data_a", data_a)
+                    st.success("저장 완료!")
+                    st.rerun()
+            else:
+                st.info("Section A 데이터가 생성되지 않았습니다.")
+
+        # ==========================================
+        # [Section B] 페르소나 수정
+        # ==========================================
+        elif current_step == 2:
+            data_b = get_state("data_b")
+            if data_b:
+                st.subheader("Section B 필드")
+                
+                target_b = data_b.get("data_b", data_b) if isinstance(data_b, dict) else data_b
+                group = target_b.get("core_target_group", {})
+                prim = target_b.get("primary_persona", {})
+                
+                new_target_def = st.text_input("타겟 정의", value=group.get("definition", ""))
+                new_persona_name = st.text_input("핵심 고객 이름", value=prim.get("name", ""))
+                new_pain = st.text_area("결핍과 욕망", value=prim.get("pain_point_and_desire", ""), height=120)
+                
+                if st.button("Section B 저장", use_container_width=True, type="primary"):
+                    target_b.setdefault("core_target_group", {})["definition"] = new_target_def
+                    target_b.setdefault("primary_persona", {})["name"] = new_persona_name
+                    target_b.setdefault("primary_persona", {})["pain_point_and_desire"] = new_pain
+                    
+                    if isinstance(data_b, dict) and "data_b" in data_b:
+                        data_b["data_b"] = target_b
+                    else:
+                        data_b = target_b
+                        
+                    set_state("data_b", data_b)
+                    st.success("저장 완료!")
+                    st.rerun()
+            else:
+                st.info("Section B 데이터가 생성되지 않았습니다.")
+
+        # ==========================================
+        # [Section C] 비주얼 아이덴티티 수정
+        # ==========================================
+        elif current_step == 3:
+            data_c = get_state("data_c")
+            if data_c:
+                st.subheader("Section C 필드")
+                
+                target_c = data_c.get("data_c", data_c) if isinstance(data_c, dict) else data_c
+                typo = target_c.get("typography", {})
+                prim_font = typo.get("primary_font", {})
+                sec_font = typo.get("secondary_font", {})
+                prin = target_c.get("design_principles", {})
+                
+                new_prim_font = st.text_input("메인 폰트(KR)", value=prim_font.get("font_name_kr", ""))
+                new_sec_font = st.text_input("서브 폰트(KR)", value=sec_font.get("font_name_kr", ""))
+                new_layout = st.text_area("레이아웃 방향성", value=prin.get("layout_direction", ""), height=100)
+                new_img_proc = st.text_area("이미지 보정 규칙", value=prin.get("image_processing", ""), height=100)
+                
+                if st.button("Section C 저장", use_container_width=True, type="primary"):
+                    target_c.setdefault("typography", {}).setdefault("primary_font", {})["font_name_kr"] = new_prim_font
+                    target_c.setdefault("typography", {}).setdefault("secondary_font", {})["font_name_kr"] = new_sec_font
+                    target_c.setdefault("design_principles", {})["layout_direction"] = new_layout
+                    target_c.setdefault("design_principles", {})["image_processing"] = new_img_proc
+                    
+                    if isinstance(data_c, dict) and "data_c" in data_c:
+                        data_c["data_c"] = target_c
+                    else:
+                        data_c = target_c
+                        
+                    set_state("data_c", data_c)
+                    st.success("저장 완료!")
+                    st.rerun()
+            else:
+                st.info("Section C 데이터가 생성되지 않았습니다.")
+
+        # ==========================================
+        # [Section DE] 로고 및 캐릭터 수정
+        # ==========================================
+        elif current_step == 4:
+            data_de = get_state("data_de")
+            if data_de:
+                st.subheader("Section DE 필드")
+                
+                target_data = data_de
+                if 'candidates' in target_data and len(target_data['candidates']) > 0:
+                    target_data = target_data['candidates'][0]
+                
+                logo_data = target_data.get('logo_identity', target_data)
+                concept = logo_data.get('concept', target_data.get('concept', {}))
+                
+                guide = target_data.get('character_guide', {})
+                intro = guide.get('intro', {})
+                story = guide.get('story', {})
+                
+                st.markdown("**Logo 수정**")
+                new_symbol = st.text_area("심볼 모티브", value=concept.get("symbol_reason", ""), height=80)
+                new_msg = st.text_area("로고 철학", value=concept.get("overall_message", ""), height=80)
+                
+                st.markdown("**Character 수정**")
+                new_char_name = st.text_input("캐릭터 이름", value=intro.get("name", ""))
+                new_char_role = st.text_area("캐릭터 세계관/역할", value=story.get("brand_role", ""), height=80)
+                
+                if st.button("Section DE 저장", use_container_width=True, type="primary"):
+                    update_target = data_de['candidates'][0] if 'candidates' in data_de and len(data_de['candidates']) > 0 else data_de
+                    
+                    if 'logo_identity' in update_target:
+                        update_target['logo_identity'].setdefault('concept', {})['symbol_reason'] = new_symbol
+                        update_target['logo_identity'].setdefault('concept', {})['overall_message'] = new_msg
+                    else:
+                        update_target.setdefault('concept', {})['symbol_reason'] = new_symbol
+                        update_target.setdefault('concept', {})['overall_message'] = new_msg
+                        
+                    update_target.setdefault('character_guide', {}).setdefault('intro', {})['name'] = new_char_name
+                    update_target.setdefault('character_guide', {}).setdefault('story', {})['brand_role'] = new_char_role
+                    
+                    set_state("data_de", data_de)
+                    st.success("저장 완료!")
+                    st.rerun()
+            else:
+                st.info("Section DE 데이터가 생성되지 않았습니다.")
+        
+        elif current_step == 5:
+            st.info("미리보기 화면입니다. 수정할 내용이 있다면 상단 버튼을 통해 이전 단계로 이동해주세요.")
+        
         st.divider()
-        if st.button("워크플로우 초기화", use_container_width=True):
+        if st.button("워크플로우 전체 초기화", use_container_width=True, type="secondary"):
             reset_workflow_state()
             st.rerun()
 
@@ -432,8 +621,19 @@ def render_step_o() -> None:
 
     brand_info_raw = get_state("brand_info")
     if brand_info_raw:
-        st.subheader("현재 확정된 브랜드")
-        st.json(brand_info_raw)
+        st.subheader("현재 확정된 브랜드 미리보기")
+        
+        # --- HTML 뷰어로 교체된 부분 ---
+        try:
+            # 확정된 브랜드 정보를 넣어 HTML 생성
+            html_content = generate_o_only_html(brand_info_raw)
+            with st.container(height=800, border=True):
+                st.html(html_content)
+        except Exception as exc:
+            st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
+            st.json(brand_info_raw)
+        # -----------------------------
+
         _render_regen_panel(
             section="O",
             target_keys=["brand_name", "name_meaning", "slogan", "story_summary"],
@@ -471,7 +671,7 @@ def render_step_a() -> None:
         try:
             _set_error(None)
             res = generate_section_a(brand_info, get_state("interview_data_a") or "")
-            set_state("data_a", res.get("data_a") or {})
+            set_state("data_a", res.get("data_a", res))
         except Exception as exc:
             _set_error(str(exc))
 
@@ -484,12 +684,20 @@ def render_step_a() -> None:
         
         try:
             html_content = generate_a_only_html(brand_info.model_dump(), get_state("data_a"))
-            
-            components.html(html_content, height=800, scrolling=True)
+            with st.container(height=800, border=True):
+                st.html(html_content)
             
         except Exception as exc:
             st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
             st.json(get_state("data_a"))
+
+    n1, n2 = st.columns(2)
+    if n1.button("이전: O", use_container_width=True):
+        set_state("current_step", 0)
+        st.rerun()
+    if n2.button("다음: B", disabled=get_state("data_a") is None, use_container_width=True):
+        set_state("current_step", 2)
+        st.rerun()
 
 
 def render_step_b() -> None:
@@ -512,7 +720,7 @@ def render_step_b() -> None:
         try:
             _set_error(None)
             res = generate_section_b(brand_info, get_state("interview_data_a") or "", get_state("interview_data_b") or "")
-            set_state("data_b", res.get("data_b") or {})
+            set_state("data_b", res.get("data_b", res))
         except Exception as exc:
             _set_error(str(exc))
 
@@ -521,8 +729,14 @@ def render_step_b() -> None:
         render_interview_card("B", qpack, "interview_data_b")
 
     if get_state("data_b"):
-        st.subheader("생성 결과")
-        st.json(get_state("data_b"))
+        st.subheader("생성 결과 미리보기")
+        try:
+            html_content = generate_b_only_html(brand_info.model_dump(), get_state("data_b"))
+            with st.container(height=800, border=True):
+                st.html(html_content)
+        except Exception as exc:
+            st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
+            st.json(get_state("data_b"))
         _render_regen_panel(
             section="B",
             target_keys=["target_audience", "key_characteristics", "primary_need", "pain_points", "awareness", "consideration", "decision", "retention"],
@@ -566,7 +780,7 @@ def render_step_c() -> None:
                 get_state("interview_data_b") or "",
                 get_state("interview_data_c") or "",
             )
-            set_state("data_c", res.get("data_c") or {})
+            set_state("data_c", res.get("data_c", res))
         except Exception as exc:
             _set_error(str(exc))
 
@@ -575,8 +789,14 @@ def render_step_c() -> None:
         render_interview_card("C", qpack, "interview_data_c")
 
     if get_state("data_c"):
-        st.subheader("생성 결과")
-        st.json(get_state("data_c"))
+        st.subheader("생성 결과 미리보기")
+        try:
+            html_content = generate_c_only_html(brand_info.model_dump(), get_state("data_c"))
+            with st.container(height=800, border=True):
+                st.html(html_content)
+        except Exception as exc:
+            st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
+            st.json(get_state("data_c"))
         _render_regen_panel(
             section="C",
             target_keys=["primary_color", "secondary_color", "accent_color", "primary_font", "secondary_font", "photography_style", "illustration_style", "graphic_elements"],
@@ -628,7 +848,7 @@ def render_step_de() -> None:
                 get_state("interview_data_c") or "",
                 get_state("interview_data_de") or "",
             )
-            set_state("data_de", res.get("data_de") or {})
+            set_state("data_de", res.get("data_de", res))
         except Exception as exc:
             _set_error(str(exc))
 
@@ -673,16 +893,15 @@ def render_step_de() -> None:
 
     data_de = get_state("data_de")
     if data_de:
-        st.subheader("생성 결과")
-        st.json(data_de)
-
-        logo_path = data_de.get("logo_path")
-        char_path = data_de.get("char_path")
-        image_cols = st.columns(2)
-        if logo_path and Path(logo_path).exists():
-            image_cols[0].image(logo_path, caption="생성된 로고", use_container_width=True)
-        if char_path and Path(char_path).exists():
-            image_cols[1].image(char_path, caption="생성된 캐릭터", use_container_width=True)
+        st.subheader("생성 결과 미리보기")
+        try:
+            # C의 데이터도 함께 전달하여 브랜드 색상 반영
+            html_content = generate_de_only_html(brand_info.model_dump(), get_state("data_c") or {}, data_de)
+            with st.container(height=800, border=True):
+                st.html(html_content)
+        except Exception as exc:
+            st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
+            st.json(data_de)
 
         _render_regen_panel(
             section="DE",
@@ -771,12 +990,60 @@ def render_step_preview() -> None:
         set_state("current_step", 4)
         st.rerun()
 
+def inject_global_css():
+    """앱 전체 버튼에서 발생하는 Streamlit 기본 빨간색 테마를 회색으로 덮어씁니다."""
+    st.markdown(
+        """
+        <style>
+        /* 1. 켜져있는 버튼 (현재 스텝 등 Primary) : 기본 회색 + 눌렀을 때 더 짙은 회색 */
+        button[kind="primary"] {
+            background-color: #737373 !important;
+            border-color: #737373 !important;
+        }
+        button[kind="primary"] p {
+            color: #FFFFFF !important;
+            font-weight: bold !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #595959 !important;
+            border-color: #595959 !important;
+        }
+        button[kind="primary"]:active, button[kind="primary"]:focus {
+            background-color: #404040 !important;
+            border-color: #404040 !important;
+            box-shadow: 0 0 0 0.2rem rgba(115, 115, 115, 0.5) !important;
+        }
+
+        /* 2. 안 켜져있는 일반 버튼 (Secondary) : 평소엔 그대로, 마우스 올리거나 누를 때 빨간색 대신 회색 적용 */
+        button[kind="secondary"]:hover {
+            border-color: #737373 !important;
+            color: #737373 !important;
+        }
+        button[kind="secondary"]:hover p {
+            color: #737373 !important;
+        }
+        button[kind="secondary"]:active, button[kind="secondary"]:focus {
+            border-color: #595959 !important;
+            color: #595959 !important;
+            box-shadow: 0 0 0 0.2rem rgba(115, 115, 115, 0.25) !important;
+        }
+        button[kind="secondary"]:active p, button[kind="secondary"]:focus p {
+            color: #595959 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 def run_app() -> None:
     st.set_page_config(page_title="NameTag Streamlit", layout="wide")
     initialize_session_state()
 
-    render_sidebar_navigation()
+    # 🌟 1. 가장 먼저 글로벌 CSS를 주입해서 눈 아픈 빨간색을 모조리 회색으로 덮어버립니다!
+    inject_global_css()
+
+    # 🌟 2. 그 다음 사이드바와 헤더를 렌더링합니다. (이제 예쁜 회색으로 나옵니다)
+    render_sidebar_editor()
     _render_progress_header()
     st.divider()
 
