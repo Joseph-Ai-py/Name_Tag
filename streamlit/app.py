@@ -459,6 +459,7 @@ def _render_regen_panel(
                             new_brand[chosen_target] = value
                             set_state("brand_info", new_brand)
                         st.success("후보를 적용했습니다.")
+                        st.rerun()
 
 
 # -----------------------------
@@ -616,6 +617,7 @@ def render_step_o() -> None:
                 )
                 set_state("brand_info", brand_info.model_dump())
                 st.success("브랜드 조합이 확정되었습니다.")
+                st.rerun()
             except Exception as exc:
                 _set_error(str(exc))
 
@@ -672,6 +674,7 @@ def render_step_a() -> None:
             _set_error(None)
             res = generate_section_a(brand_info, get_state("interview_data_a") or "")
             set_state("data_a", res.get("data_a", res))
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
@@ -721,6 +724,7 @@ def render_step_b() -> None:
             _set_error(None)
             res = generate_section_b(brand_info, get_state("interview_data_a") or "", get_state("interview_data_b") or "")
             set_state("data_b", res.get("data_b", res))
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
@@ -781,6 +785,7 @@ def render_step_c() -> None:
                 get_state("interview_data_c") or "",
             )
             set_state("data_c", res.get("data_c", res))
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
@@ -849,6 +854,7 @@ def render_step_de() -> None:
                 get_state("interview_data_de") or "",
             )
             set_state("data_de", res.get("data_de", res))
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
@@ -871,6 +877,7 @@ def render_step_de() -> None:
             merged = dict(get_state("data_de") or {})
             merged.update(res.get("data_de") or {})
             set_state("data_de", merged)
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
@@ -888,6 +895,7 @@ def render_step_de() -> None:
             merged = dict(get_state("data_de") or {})
             merged.update(res.get("data_de") or {})
             set_state("data_de", merged)
+            st.rerun()
         except Exception as exc:
             _set_error(str(exc))
 
