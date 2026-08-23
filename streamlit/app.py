@@ -27,6 +27,7 @@ from logic_o import apply_candidate_mix, generate_o_candidates, generate_o_inter
 from models import BrandData, BrandInfo
 from pdf_service import build_download_filename, generate_pdf_bytes
 from state import get_state, initialize_session_state, reset_workflow_state, set_state
+from pdf_builder import get_absolute_path
 
 STEP_LABELS = ["O", "A", "B", "C", "DE", "Preview"]
 STEP_TITLES = ["브랜드 초안", "철학/스토리", "타겟/여정", "비주얼", "로고/캐릭터", "PDF 미리보기"]
@@ -447,6 +448,26 @@ def render_sidebar_editor() -> None:
         
         elif current_step == 5:
             st.info("미리보기 화면입니다. 수정할 내용이 있다면 상단 버튼을 통해 이전 단계로 이동해주세요.")
+            
+            # ==========================================
+            # 🎨 사이드바에 시각적 에셋(로고/캐릭터) 띄우기
+            # ==========================================
+            data_de = get_state("data_de")
+            if data_de:
+                st.divider()
+                st.markdown("### 🎨 생성된 비주얼 에셋")
+                
+                # 1. 로고 이미지 경로 추출 및 렌더링
+                logo_path = get_absolute_path(data_de.get('logo_path', None))
+                if logo_path and os.path.exists(logo_path):
+                    st.caption("마스터 로고")
+                    st.image(logo_path, use_container_width=True)
+                
+                # 2. 캐릭터 이미지 경로 추출 및 렌더링
+                char_path = get_absolute_path(data_de.get('char_path', None))
+                if char_path and os.path.exists(char_path):
+                    st.caption("브랜드 캐릭터")
+                    st.image(char_path, use_container_width=True)
         
         st.divider()
         if st.button("워크플로우 전체 초기화", use_container_width=True, type="secondary"):

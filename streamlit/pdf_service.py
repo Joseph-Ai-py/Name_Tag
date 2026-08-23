@@ -25,10 +25,6 @@ from pdf_builder import (
     get_absolute_path
 )
 
-import base64
-import os
-
-
 def generate_pdf_bytes(
 	brand_info: dict,
 	data_a: dict,
@@ -190,21 +186,6 @@ def generate_c_only_html(brand_info: dict, data_c: dict) -> str:
     html += "</body>\n</html>"
     return html
 
-def get_image_base64(image_path):
-    """이미지 파일을 읽어 Base64 데이터 URI 문자열로 반환합니다."""
-    if not os.path.exists(image_path):
-        return ""
-    
-    with open(image_path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode()
-    
-    # 확장자에 맞춰 MIME 타입 설정 (예: png, jpeg)
-    ext = image_path.split('.')[-1].lower()
-    mime_type = "image/jpeg" if ext in ["jpg", "jpeg"] else f"image/{ext}"
-    
-    # Base64 데이터 URI 형식으로 반환
-    return f"data:{mime_type};base64,{encoded_string}"
-
 def generate_de_only_html(brand_info: dict, data_c: dict, data_de: dict) -> str:
     """Section DE 미리보기용 HTML 생성"""
     if data_c and 'data_c' in data_c: data_c = data_c['data_c']
@@ -227,19 +208,18 @@ def generate_de_only_html(brand_info: dict, data_c: dict, data_de: dict) -> str:
 
     # 로고 및 캐릭터 이미지 경로 추출
     logo_path = get_absolute_path(data_de.get('logo_path', None)) if data_de else None
-    base64_logo = get_image_base64(logo_path)
-    print(f'logo paht : {base64_logo}')
+    print(f'logo paht : {logo_path}')
     char_path = get_absolute_path(data_de.get('char_path', None)) if data_de else None
-    base64_char = get_image_base64(char_path)
-    print(f'char paht : {base64_char}')
+    print(f'char paht : {logo_path}')
 
     html = f"""<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="UTF-8">\n<style>{preview_css}</style>\n</head>\n<body>\n"""
     
     if data_de:
         html += build_d_logo_identity(data_de, logo_path)
-        html += build_e_character_guide(data_de, char_path)
-        print(f"html_1 = {html}")
+        html += build_e_character_guide(data_de, logo_path)
+        # print(f"html_1 = {html}")
         
     html += "</body>\n</html>"
+    print(f"html_2 = {html}")
     return html
 
