@@ -31,6 +31,85 @@ from state import get_state, initialize_session_state, reset_workflow_state, set
 STEP_LABELS = ["O", "A", "B", "C", "DE", "Preview"]
 STEP_TITLES = ["브랜드 초안", "철학/스토리", "타겟/여정", "비주얼", "로고/캐릭터", "PDF 미리보기"]
 
+def inject_global_css():
+    """앱 전체 버튼 테마 변경 및 전체 화면 로딩(Spinner) UI 커스텀"""
+    st.markdown(
+        """
+        <style>
+        /* 1. 켜져있는 버튼 (현재 스텝 등 Primary) : 기본 회색 + 눌렀을 때 더 짙은 회색 */
+        button[kind="primary"] {
+            background-color: #737373 !important;
+            border-color: #737373 !important;
+        }
+        button[kind="primary"] p {
+            color: #FFFFFF !important;
+            font-weight: bold !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #595959 !important;
+            border-color: #595959 !important;
+        }
+        button[kind="primary"]:active, button[kind="primary"]:focus {
+            background-color: #404040 !important;
+            border-color: #404040 !important;
+            box-shadow: 0 0 0 0.2rem rgba(115, 115, 115, 0.5) !important;
+        }
+
+        /* 2. 안 켜져있는 일반 버튼 (Secondary) */
+        button[kind="secondary"]:hover {
+            border-color: #737373 !important;
+            color: #737373 !important;
+        }
+        button[kind="secondary"]:hover p {
+            color: #737373 !important;
+        }
+        button[kind="secondary"]:active, button[kind="secondary"]:focus {
+            border-color: #595959 !important;
+            color: #595959 !important;
+            box-shadow: 0 0 0 0.2rem rgba(115, 115, 115, 0.25) !important;
+        }
+        button[kind="secondary"]:active p, button[kind="secondary"]:focus p {
+            color: #595959 !important;
+        }
+
+        /* 🌟 3. 전체 화면 로딩(Spinner) UI 커스텀 🌟 */
+        /* 화면 전체를 반투명한 검은색으로 덮어버림 */
+        [data-testid="stSpinner"] {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: rgba(0, 0, 0, 0.65) !important; /* 뒷배경 어둡게 */
+            z-index: 99999 !important; /* 무조건 화면 맨 위에 오도록 */
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        
+        /* 가운데 뜨는 로딩 박스 디자인 */
+        [data-testid="stSpinner"] > div {
+            background-color: var(--background-color) !important; /* 라이트/다크 테마 자동 맞춤 */
+            padding: 40px 50px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important; /* 그림자 효과 */
+            border: 1px solid var(--secondary-background-color) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 15px !important;
+        }
+
+        /* 로딩 텍스트(문구) 크기 키우기 */
+        [data-testid="stSpinner"] > div > div:last-child {
+            font-size: 1.2rem !important;
+            font-weight: 600 !important;
+            color: var(--text-color) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # -----------------------------
 # 공통 유틸
@@ -649,7 +728,11 @@ def render_step_o() -> None:
     if b1.button("인터뷰 시작", disabled=not can_interview, use_container_width=True):
         try:
             _set_error(None)
-            qpack = generate_o_interview_questions(brand_data)
+            
+            # 🚀 추가된 로딩 UI (인터뷰 질문 생성)
+            with st.spinner("입력하신 키워드를 바탕으로 맞춤형 인터뷰 질문을 생성하고 있습니다... 🎙️"):
+                qpack = generate_o_interview_questions(brand_data)
+                
             set_state("section_o_questions", qpack)
             set_state("O_answers", [])
             set_state("O_current_idx", 0)
@@ -659,7 +742,11 @@ def render_step_o() -> None:
     if b2.button("인터뷰 건너뛰고 후보 생성", disabled=not can_interview, use_container_width=True):
         try:
             _set_error(None)
-            resp = generate_o_candidates(brand_data, "")
+            
+            # 🚀 추가된 로딩 UI (건너뛰고 바로 생성)
+            with st.spinner("AI가 즉시 브랜드 초안 후보를 기획하고 있습니다... ⏳ (약 15~30초 소요)"):
+                resp = generate_o_candidates(brand_data, "")
+                
             set_state("section_o_candidates", resp.get("candidates", []))
         except Exception as exc:
             _set_error(str(exc))
@@ -747,7 +834,11 @@ def render_step_a() -> None:
     if c1.button("인터뷰 시작", use_container_width=True):
         try:
             _set_error(None)
-            set_state("section_a_questions", generate_a_interview_questions(brand_info))
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("브랜드 철학과 스토리를 도출하기 위한 심층 질문을 준비하고 있습니다... 🎙️"):
+                set_state("section_a_questions", generate_a_interview_questions(brand_info))
+                
             set_state("A_answers", [])
             set_state("A_current_idx", 0)
         except Exception as exc:
@@ -801,7 +892,11 @@ def render_step_b() -> None:
     if c1.button("인터뷰 시작", use_container_width=True):
         try:
             _set_error(None)
-            set_state("section_b_questions", generate_b_interview_questions(brand_info))
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("타겟 고객과 여정을 구체화하기 위한 질문을 준비하고 있습니다... 🎙️"):
+                set_state("section_b_questions", generate_b_interview_questions(brand_info))
+                
             set_state("B_answers", [])
             set_state("B_current_idx", 0)
         except Exception as exc:
@@ -853,7 +948,11 @@ def render_step_c() -> None:
     if c1.button("인터뷰 시작", use_container_width=True):
         try:
             _set_error(None)
-            set_state("section_c_questions", generate_c_interview_questions(brand_info))
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("비주얼 아이덴티티 방향성을 잡기 위한 질문을 준비하고 있습니다... 🎙️"):
+                set_state("section_c_questions", generate_c_interview_questions(brand_info))
+                
             set_state("C_answers", [])
             set_state("C_current_idx", 0)
         except Exception as exc:
@@ -912,10 +1011,15 @@ def render_step_de() -> None:
         return
 
     c1, c2 = st.columns(2)
+    c1, c2 = st.columns(2)
     if c1.button("인터뷰 시작", use_container_width=True):
         try:
             _set_error(None)
-            set_state("section_de_questions", generate_de_interview_questions(brand_info, get_state("interview_data_c") or ""))
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("로고와 캐릭터 컨셉을 도출하기 위한 질문을 준비하고 있습니다... 🎙️"):
+                set_state("section_de_questions", generate_de_interview_questions(brand_info, get_state("interview_data_c") or ""))
+                
             set_state("DE_answers", [])
             set_state("DE_current_idx", 0)
         except Exception as exc:
