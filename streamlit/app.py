@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
+import pandas as pd
+import os
+from datetime import datetime
 
 from logic_a import generate_a_interview_questions, generate_section_a, regenerate_a_field
 from logic_b import generate_b_interview_questions, generate_section_b, regenerate_b_field
@@ -135,95 +138,165 @@ def render_sidebar_editor() -> None:
             else:
                 st.info("아직 조합이 확정되지 않았습니다.")
 
-        # ==========================================
-        # [Section A] 철학, 미션/비전 수정
-        # ==========================================
         elif current_step == 1:
             data_a = get_state("data_a")
             if data_a:
-                st.subheader("Section A 필드")
+                st.subheader("Section A 필드 전체 수정")
                 
-                # 🌟 데이터 껍질 안전하게 벗기기
                 target_a = data_a.get("data_a", data_a) if isinstance(data_a, dict) else data_a
                 
-                phil = target_a.get("brand_philosophy", {})
-                ci = target_a.get("core_identity", {})
+                # 1. 철학 및 에센스
+                with st.expander("1. 철학 및 에센스", expanded=False):
+                    phil = target_a.get("brand_philosophy", {})
+                    ess = target_a.get("brand_essence", {})
+                    new_manifesto = st.text_area("Manifesto (철학 선언문)", value=phil.get("manifesto", ""), height=150)
+                    new_raison = st.text_input("Raison d'être (존재 이유)", value=phil.get("raison_detre", ""))
+                    new_ess_kw = st.text_input("Core Essence (핵심 키워드)", value=ess.get("keyword", ""))
                 
-                new_manifesto = st.text_area("Manifesto (철학 선언문)", value=phil.get("manifesto", ""), height=150)
-                new_mission = st.text_area("Mission (사명)", value=ci.get("mission", ""), height=100)
-                new_vision = st.text_area("Vision (비전)", value=ci.get("vision", ""), height=100)
+                # 2. 미션 및 비전
+                with st.expander("2. 기업 아이덴티티", expanded=False):
+                    ci = target_a.get("core_identity", {})
+                    new_mission = st.text_area("Mission (사명)", value=ci.get("mission", ""), height=100)
+                    new_vision = st.text_area("Vision (비전)", value=ci.get("vision", ""), height=100)
                 
-                if st.button("Section A 저장", use_container_width=True, type="primary"):
+                # 3. 브랜드 스토리
+                with st.expander("3. 브랜드 스토리", expanded=False):
+                    # AI 버전에 따라 키 이름이 다를 수 있으므로 방어적 호출
+                    story_text = target_a.get("brand_story_full", target_a.get("brand_story", ""))
+                    if isinstance(story_text, dict):
+                        story_text = story_text.get("brand_story", "")
+                    new_story = st.text_area("스토리 전문", value=story_text, height=250)
+
+                # 4. 언어적 자산 (슬로건 등)
+                with st.expander("4. 슬로건 & 네이밍 서사", expanded=False):
+                    ne = target_a.get("naming_expansion", {})
+                    se = target_a.get("slogan_expansion", {})
+                    new_name_story = st.text_area("네이밍 서사", value=ne.get("name_story", ""), height=150)
+                    new_main_slogan_en = st.text_input("메인 슬로건 (영문)", value=se.get("main_slogan_en", ""))
+
+                # 5. 포지셔닝 및 약속
+                with st.expander("5. 포지셔닝 & 약속", expanded=False):
+                    pos = target_a.get("positioning", {})
+                    bp = target_a.get("unbreakable_brand_promise", {})
+                    new_pos_stmt = st.text_area("포지셔닝 선언문", value=pos.get("statement", ""), height=100)
+                    new_promise_decl = st.text_input("타협 불가능한 약속", value=bp.get("declaration", ""))
+                
+                if st.button("Section A 전체 저장", use_container_width=True, type="primary"):
+                    # 데이터 덮어쓰기
                     target_a.setdefault("brand_philosophy", {})["manifesto"] = new_manifesto
+                    target_a.setdefault("brand_philosophy", {})["raison_detre"] = new_raison
+                    target_a.setdefault("brand_essence", {})["keyword"] = new_ess_kw
+                    
                     target_a.setdefault("core_identity", {})["mission"] = new_mission
                     target_a.setdefault("core_identity", {})["vision"] = new_vision
                     
-                    # 🌟 껍질 유지하며 덮어쓰기
+                    target_a["brand_story_full"] = new_story
+                    
+                    target_a.setdefault("naming_expansion", {})["name_story"] = new_name_story
+                    target_a.setdefault("slogan_expansion", {})["main_slogan_en"] = new_main_slogan_en
+                    
+                    target_a.setdefault("positioning", {})["statement"] = new_pos_stmt
+                    target_a.setdefault("unbreakable_brand_promise", {})["declaration"] = new_promise_decl
+                    
+                    # 껍질 유지하며 저장
                     if isinstance(data_a, dict) and "data_a" in data_a:
                         data_a["data_a"] = target_a
                     else:
                         data_a = target_a
                         
                     set_state("data_a", data_a)
-                    st.success("저장 완료!")
+                    st.success("Section A 전체 저장 완료!")
                     st.rerun()
             else:
                 st.info("Section A 데이터가 생성되지 않았습니다.")
 
         # ==========================================
-        # [Section B] 페르소나 수정
+        # [Section B] 타겟 페르소나, 여정 전체 수정
         # ==========================================
         elif current_step == 2:
             data_b = get_state("data_b")
             if data_b:
-                st.subheader("Section B 필드")
+                st.subheader("Section B 필드 전체 수정")
                 
                 target_b = data_b.get("data_b", data_b) if isinstance(data_b, dict) else data_b
-                group = target_b.get("core_target_group", {})
-                prim = target_b.get("primary_persona", {})
                 
-                new_target_def = st.text_input("타겟 정의", value=group.get("definition", ""))
-                new_persona_name = st.text_input("핵심 고객 이름", value=prim.get("name", ""))
-                new_pain = st.text_area("결핍과 욕망", value=prim.get("pain_point_and_desire", ""), height=120)
+                # 1. 타겟 설정 근거 및 그룹 정의
+                with st.expander("1. 타겟 정의 및 근거", expanded=False):
+                    group = target_b.get("core_target_group", {})
+                    new_reasoning = st.text_area("타겟 설정 근거", value=target_b.get("strategic_reasoning", ""), height=100)
+                    new_target_def = st.text_input("타겟 정의", value=group.get("definition", ""))
+                    new_demographics = st.text_input("인구통계학적 특성", value=group.get("demographics", ""))
+                    new_behavior = st.text_area("소비 행동 특징", value=group.get("consumption_behavior", ""), height=100)
                 
-                if st.button("Section B 저장", use_container_width=True, type="primary"):
+                # 2. 메인 페르소나 (Primary Persona)
+                with st.expander("2. 1순위 핵심 고객 (페르소나)", expanded=False):
+                    prim = target_b.get("primary_persona", {})
+                    new_persona_name = st.text_input("핵심 고객 이름", value=prim.get("name", ""))
+                    new_persona_desc = st.text_input("나이 및 직업", value=prim.get("age_and_job", ""))
+                    new_scene = st.text_area("일상의 한 장면", value=prim.get("daily_scene", ""), height=100)
+                    new_pain = st.text_area("결핍과 욕망", value=prim.get("pain_point_and_desire", ""), height=120)
+                    new_deal = st.text_input("구매 포기 트리거 (Deal Breaker)", value=prim.get("deal_breaker", ""))
+
+                if st.button("Section B 전체 저장", use_container_width=True, type="primary"):
+                    # 1. 타겟 정의 및 근거 저장
+                    target_b["strategic_reasoning"] = new_reasoning
                     target_b.setdefault("core_target_group", {})["definition"] = new_target_def
-                    target_b.setdefault("primary_persona", {})["name"] = new_persona_name
-                    target_b.setdefault("primary_persona", {})["pain_point_and_desire"] = new_pain
+                    target_b.setdefault("core_target_group", {})["demographics"] = new_demographics
+                    target_b.setdefault("core_target_group", {})["consumption_behavior"] = new_behavior
                     
+                    # 2. 메인 페르소나 저장
+                    target_b.setdefault("primary_persona", {})["name"] = new_persona_name
+                    target_b.setdefault("primary_persona", {})["age_and_job"] = new_persona_desc
+                    target_b.setdefault("primary_persona", {})["daily_scene"] = new_scene
+                    target_b.setdefault("primary_persona", {})["pain_point_and_desire"] = new_pain
+                    target_b.setdefault("primary_persona", {})["deal_breaker"] = new_deal
+                    
+                    # 껍질 유지하며 저장
                     if isinstance(data_b, dict) and "data_b" in data_b:
                         data_b["data_b"] = target_b
                     else:
                         data_b = target_b
                         
                     set_state("data_b", data_b)
-                    st.success("저장 완료!")
+                    st.success("Section B 전체 저장 완료!")
                     st.rerun()
             else:
                 st.info("Section B 데이터가 생성되지 않았습니다.")
 
         # ==========================================
-        # [Section C] 비주얼 아이덴티티 수정
+        # [Section C] 비주얼 아이덴티티 전체 수정
         # ==========================================
         elif current_step == 3:
             data_c = get_state("data_c")
             if data_c:
-                st.subheader("Section C 필드")
+                st.subheader("Section C 필드 전체 수정")
                 
                 target_c = data_c.get("data_c", data_c) if isinstance(data_c, dict) else data_c
-                typo = target_c.get("typography", {})
-                prim_font = typo.get("primary_font", {})
-                sec_font = typo.get("secondary_font", {})
-                prin = target_c.get("design_principles", {})
                 
-                new_prim_font = st.text_input("메인 폰트(KR)", value=prim_font.get("font_name_kr", ""))
-                new_sec_font = st.text_input("서브 폰트(KR)", value=sec_font.get("font_name_kr", ""))
-                new_layout = st.text_area("레이아웃 방향성", value=prin.get("layout_direction", ""), height=100)
-                new_img_proc = st.text_area("이미지 보정 규칙", value=prin.get("image_processing", ""), height=100)
+                # 1. 타이포그래피 (서체)
+                with st.expander("1. 타이포그래피 (Typography)", expanded=False):
+                    typo = target_c.get("typography", {})
+                    prim_font = typo.get("primary_font", {})
+                    sec_font = typo.get("secondary_font", {})
+                    
+                    new_prim_font = st.text_input("메인 폰트 (KR)", value=prim_font.get("font_name_kr", ""))
+                    new_prim_usage = st.text_area("메인 폰트 사용 기준", value=prim_font.get("usage_and_reason", ""), height=80)
+                    
+                    new_sec_font = st.text_input("서브 폰트 (KR)", value=sec_font.get("font_name_kr", ""))
+                    new_sec_usage = st.text_area("서브 폰트 사용 기준", value=sec_font.get("usage_and_reason", ""), height=80)
                 
-                if st.button("Section C 저장", use_container_width=True, type="primary"):
+                # 2. 디자인 원칙 및 에셋 가이드
+                with st.expander("2. 디자인 원칙 및 가이드", expanded=False):
+                    prin = target_c.get("design_principles", {})
+                    new_layout = st.text_area("레이아웃 방향성 (Layout & UI)", value=prin.get("layout_direction", ""), height=100)
+                    new_img_proc = st.text_area("이미지 보정 규칙 (Image Processing)", value=prin.get("image_processing", ""), height=100)
+                
+                if st.button("Section C 전체 저장", use_container_width=True, type="primary"):
                     target_c.setdefault("typography", {}).setdefault("primary_font", {})["font_name_kr"] = new_prim_font
+                    target_c.setdefault("typography", {}).setdefault("primary_font", {})["usage_and_reason"] = new_prim_usage
                     target_c.setdefault("typography", {}).setdefault("secondary_font", {})["font_name_kr"] = new_sec_font
+                    target_c.setdefault("typography", {}).setdefault("secondary_font", {})["usage_and_reason"] = new_sec_usage
+                    
                     target_c.setdefault("design_principles", {})["layout_direction"] = new_layout
                     target_c.setdefault("design_principles", {})["image_processing"] = new_img_proc
                     
@@ -233,18 +306,18 @@ def render_sidebar_editor() -> None:
                         data_c = target_c
                         
                     set_state("data_c", data_c)
-                    st.success("저장 완료!")
+                    st.success("Section C 전체 저장 완료!")
                     st.rerun()
             else:
                 st.info("Section C 데이터가 생성되지 않았습니다.")
 
         # ==========================================
-        # [Section DE] 로고 및 캐릭터 수정
+        # [Section DE] 로고 및 캐릭터 전체 수정
         # ==========================================
         elif current_step == 4:
             data_de = get_state("data_de")
             if data_de:
-                st.subheader("Section DE 필드")
+                st.subheader("Section DE 필드 전체 수정")
                 
                 target_data = data_de
                 if 'candidates' in target_data and len(target_data['candidates']) > 0:
@@ -257,29 +330,38 @@ def render_sidebar_editor() -> None:
                 intro = guide.get('intro', {})
                 story = guide.get('story', {})
                 
-                st.markdown("**Logo 수정**")
-                new_symbol = st.text_area("심볼 모티브", value=concept.get("symbol_reason", ""), height=80)
-                new_msg = st.text_area("로고 철학", value=concept.get("overall_message", ""), height=80)
+                # 1. 로고 아이덴티티
+                with st.expander("1. 로고 아이덴티티", expanded=False):
+                    new_symbol = st.text_area("심볼 모티브 (Symbol Motif)", value=concept.get("symbol_reason", ""), height=100)
+                    new_color_reason = st.text_area("컬러 아이덴티티", value=concept.get("color_reason", ""), height=80)
+                    new_msg = st.text_area("로고 철학 (Overall Message)", value=concept.get("overall_message", ""), height=100)
                 
-                st.markdown("**Character 수정**")
-                new_char_name = st.text_input("캐릭터 이름", value=intro.get("name", ""))
-                new_char_role = st.text_area("캐릭터 세계관/역할", value=story.get("brand_role", ""), height=80)
+                # 2. 캐릭터 가이드
+                with st.expander("2. 캐릭터 가이드", expanded=False):
+                    new_char_name = st.text_input("캐릭터 이름", value=intro.get("name", ""))
+                    new_appearance = st.text_area("외형 및 디자인 특징", value=intro.get("appearance", ""), height=100)
+                    new_char_role = st.text_area("캐릭터 세계관 및 역할", value=story.get("brand_role", ""), height=100)
+                    new_sym_value = st.text_input("상징 가치", value=intro.get("symbolic_value", ""))
                 
-                if st.button("Section DE 저장", use_container_width=True, type="primary"):
+                if st.button("Section DE 전체 저장", use_container_width=True, type="primary"):
                     update_target = data_de['candidates'][0] if 'candidates' in data_de and len(data_de['candidates']) > 0 else data_de
                     
                     if 'logo_identity' in update_target:
                         update_target['logo_identity'].setdefault('concept', {})['symbol_reason'] = new_symbol
+                        update_target['logo_identity'].setdefault('concept', {})['color_reason'] = new_color_reason
                         update_target['logo_identity'].setdefault('concept', {})['overall_message'] = new_msg
                     else:
                         update_target.setdefault('concept', {})['symbol_reason'] = new_symbol
+                        update_target.setdefault('concept', {})['color_reason'] = new_color_reason
                         update_target.setdefault('concept', {})['overall_message'] = new_msg
                         
                     update_target.setdefault('character_guide', {}).setdefault('intro', {})['name'] = new_char_name
+                    update_target.setdefault('character_guide', {}).setdefault('intro', {})['appearance'] = new_appearance
+                    update_target.setdefault('character_guide', {}).setdefault('intro', {})['symbolic_value'] = new_sym_value
                     update_target.setdefault('character_guide', {}).setdefault('story', {})['brand_role'] = new_char_role
                     
                     set_state("data_de", data_de)
-                    st.success("저장 완료!")
+                    st.success("Section DE 전체 저장 완료!")
                     st.rerun()
             else:
                 st.info("Section DE 데이터가 생성되지 않았습니다.")
@@ -291,6 +373,19 @@ def render_sidebar_editor() -> None:
         if st.button("워크플로우 전체 초기화", use_container_width=True, type="secondary"):
             reset_workflow_state()
             st.rerun()
+
+        # ==========================================
+        # 🚀 피드백 폼 고정 버튼 추가
+        # ==========================================
+        st.divider()
+        st.markdown("### 💡 NameTag 개선 참여")
+        st.caption("서비스가 마음에 드셨나요? 작은 의견이라도 큰 도움이 됩니다!")
+        st.link_button(
+            "📝 1분 의견 제출하기",
+            url="https://docs.google.com/forms/d/e/1FAIpQLSeNkIQc2QpAsck_oYXrIg2KItSd7_oA00osOEClX-IZowRsPw/viewform?usp=preview",
+            use_container_width=True,
+            type="primary" # 버튼 색상을 강조하고 싶다면 추가
+        )
 
 # -----------------------------
 # 인터뷰 카드 렌더
@@ -994,6 +1089,56 @@ def render_step_preview() -> None:
             use_container_width=True,
         )
 
+    # 기존 PDF 다운로드 버튼 코드 아래에 추가
+    with st.expander("📮 10초 설문 — 방금 만든 결과물이 어떠셨나요?"):
+        # w1: 별점 피드백 (st.feedback은 0~4의 인덱스를 반환하므로 주의)
+        w1 = st.feedback("stars")
+        
+        # w2: 아쉬운 점 다중 선택
+        w2 = st.multiselect(
+            "아쉬웠던 부분이 있다면 골라주세요.", 
+            ["브랜드 정체성(질문·문구)", "로고 이미지", "캐릭터 이미지", "MVB 리포트", "PDF 파일", "생성 속도·오류", "괜찮았다"]
+        )
+        
+        # 조건부 UI: '괜찮았다'가 없거나 아쉬운 점을 하나라도 선택했을 때만 연락처 입력칸 노출
+        show_contact = len(w2) > 0 and "괜찮았다" not in w2
+        w3 = ""
+        if show_contact:
+            w3 = st.text_input("개선 소식이나 알림을 받아보실까요? (이메일/오픈카톡 아이디)", placeholder="선택사항입니다.")
+
+        # 제출 버튼
+        if st.button("의견 제출하기", use_container_width=True):
+            if w1 is None:
+                st.warning("별점을 먼저 선택해 주세요!")
+            else:
+                # 피드백이 중복으로 들어가는 것을 방지 (세션 스테이트 활용)
+                if "feedback_submitted" not in st.session_state:
+                    st.session_state.feedback_submitted = True
+                    
+                    # 별점을 1~5점 척도로 보정 (0 -> 1점, 4 -> 5점)
+                    star_score = w1 + 1
+                    issues = ", ".join(w2) if w2 else "선택 안 함"
+                    
+                    # 저장할 데이터 프레임 구성
+                    new_feedback = pd.DataFrame({
+                        "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+                        "Rating (Stars)": [star_score],
+                        "Issues": [issues],
+                        "Contact (Optional)": [w3]
+                    })
+                    
+                    csv_file_path = "nametag_feedback.csv"
+                    
+                    # CSV 파일이 없으면 헤더 포함하여 생성, 있으면 맨 아래에 행 추가(append)
+                    if not os.path.exists(csv_file_path):
+                        new_feedback.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
+                    else:
+                        new_feedback.to_csv(csv_file_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+                    
+                    st.success("소중한 의견이 저장되었습니다! 다음 버전에 꼭 반영하겠습니다.")
+                else:
+                    st.info("이미 의견을 제출해주셨습니다. 감사합니다!")
+
     if st.button("이전: DE", use_container_width=True):
         set_state("current_step", 4)
         st.rerun()
@@ -1068,6 +1213,17 @@ def run_app() -> None:
         render_step_de()
     else:
         render_step_preview()
+
+    st.divider()
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("**NameTag가 유용하셨나요? 1분 피드백으로 다음 버전을 함께 만들어주세요!**")
+    with col2:
+        st.link_button(
+            "🚀 의견 제출하기",
+            url="https://docs.google.com/forms/d/e/1FAIpQLSeNkIQc2QpAsck_oYXrIg2KItSd7_oA00osOEClX-IZowRsPw/viewform?usp=preview",
+            use_container_width=True
+        )
 
 
 if __name__ == "__main__":

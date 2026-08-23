@@ -274,6 +274,7 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
         html += build_e_character_guide(data_DE, char_path)
 
     html += "</body>\n</html>"
+    print(f"html_2 : {html}")
 
     return html
 
