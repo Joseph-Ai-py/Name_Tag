@@ -25,6 +25,9 @@ from pdf_builder import (
     get_absolute_path
 )
 
+import base64
+import os
+
 
 def generate_pdf_bytes(
 	brand_info: dict,

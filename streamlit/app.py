@@ -677,7 +677,10 @@ def render_step_o() -> None:
     _render_error()
 
     raw = get_state("brand_data") or {}
-    vibe_options = ["모던", "미니멀", "따뜻함", "프리미엄", "감성", "자연", "테크", "클래식"]
+    vibe_options = ["모던", "미니멀", "따뜻함", "프리미엄",
+    "자연", "테크", "클래식", "캐주얼",
+    "에너지틱", "빈티지", "힐링", "아티스틱",
+    "플레이풀", "다크", "스트릿", "한국·전통"]
 
     c1, c2 = st.columns(2)
     with c1:

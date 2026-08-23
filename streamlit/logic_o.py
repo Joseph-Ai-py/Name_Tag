@@ -7,12 +7,40 @@ from models import BrandData, BrandInfo, CandidatesResponse, InterviewResponseSc
 from prompts import get_O_interview_prompt, get_O_mvb_prompt
 from utils import normalize_candidates
 
+VIBE_EN_MAP = {
+    "모던": "modern, clean geometric, crisp lines, contemporary sans-serif",
+    "미니멀": "minimal, lots of whitespace, monochrome, restrained, simple icon",
+    "따뜻함": "warm cozy, soft rounded shapes, cream/beige/brown, friendly",
+    "프리미엄": "premium sophisticated, dark palette with gold accents, refined serif",
+    "자연": "natural organic, earthy greens and browns, leaf motifs, handmade texture",
+    "테크": "tech futuristic, bold gradients, geometric, neon accent, digital",
+    "클래식": "classic timeless, navy and gold, traditional serif, trustworthy",
+    "캐주얼": "casual relaxed, approachable rounded sans-serif, bright everyday colors",
+    "에너지틱": "energetic dynamic, vivid pop colors, motion shapes, bold and lively",
+    "빈티지": "vintage retro, mustard/teal/orange, chunky typography, film grain",
+    "힐링": "healing serene, spa-like, sage green and soft beige, peaceful breathing room",
+    "아티스틱": "artistic creative, painterly illustration, hand-drawn texture, unique",
+    "플레이풀": "playful cute, cartoon shapes, cheerful pastel pop, youthful fun",
+    "다크": "dark intense, black and high contrast, grunge or sharp lettering",
+    "스트릿": "street hip urban, graffiti influence, bold condensed type, city vibe",
+    "한국·전통": "korean traditional, hanok architecture, dancheong colors, oriental calligraphy",
+}
 
 def build_base_prompt(brand_data: BrandData, core_prompt: str, brand_name: str = "브랜드명 미정") -> str:
-	return f"""
+    combined_vibes = []
+    for vibe in brand_data.vibes:
+        en_desc = VIBE_EN_MAP.get(vibe, "")
+        if en_desc:
+            combined_vibes.append(f"{vibe}({en_desc})")
+        else:
+            combined_vibes.append(vibe)
+            
+    vibe_str = ", ".join(combined_vibes) if combined_vibes else "없음"
+
+    return f"""
 [기본 입력 정보]
 - 업종/서비스: {brand_data.business_type}
-- 브랜드 감성: {', '.join(brand_data.vibes)}
+- 브랜드 감성: {vibe_str}
 - 타겟 고객: {brand_data.target}
 - 확정된 브랜드명: {brand_name}
 - 추가 키워드: {brand_data.keywords or '없음'}
