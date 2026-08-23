@@ -645,7 +645,7 @@ def render_step_o() -> None:
     can_generate_candidates = len((get_state("interview_data_o") or "").strip()) > 0
 
     st.markdown("<br>", unsafe_allow_html=True) # 여백 추가
-    b1, b2 = st.columns(3)
+    b1, b2 = st.columns(2)
     if b1.button("인터뷰 시작", disabled=not can_interview, use_container_width=True):
         try:
             _set_error(None)
