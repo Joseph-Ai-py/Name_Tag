@@ -495,11 +495,16 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
                 formatted = _format_interview_answers(questions, answers)
                 set_state(output_state_key, formatted)
                 st.success("인터뷰 답변 저장 완료")
+                
                 if section == "O":
                     try:
                         brand_data_raw = get_state("brand_data") or {}
                         brand_data = BrandData(**brand_data_raw)
-                        resp = generate_o_candidates(brand_data, formatted)
+                        
+                        # 🚀 추가된 로딩 UI (스피너)
+                        with st.spinner("AI가 인터뷰 답변을 분석하여 브랜드 초안 후보를 기획하고 있습니다... ⏳ (약 15~30초 소요)"):
+                            resp = generate_o_candidates(brand_data, formatted)
+                            
                         set_state("section_o_candidates", resp.get("candidates", []))
                         st.success("인터뷰 기반 후보 생성을 완료했습니다.")
                     except Exception as exc:
@@ -640,7 +645,7 @@ def render_step_o() -> None:
     can_generate_candidates = len((get_state("interview_data_o") or "").strip()) > 0
 
     st.markdown("<br>", unsafe_allow_html=True) # 여백 추가
-    b1, b2, b3 = st.columns(3)
+    b1, b2 = st.columns(3)
     if b1.button("인터뷰 시작", disabled=not can_interview, use_container_width=True):
         try:
             _set_error(None)
@@ -655,14 +660,6 @@ def render_step_o() -> None:
         try:
             _set_error(None)
             resp = generate_o_candidates(brand_data, "")
-            set_state("section_o_candidates", resp.get("candidates", []))
-        except Exception as exc:
-            _set_error(str(exc))
-
-    if b3.button("인터뷰 기반 후보 생성", disabled=not can_generate_candidates, use_container_width=True):
-        try:
-            _set_error(None)
-            resp = generate_o_candidates(brand_data, get_state("interview_data_o") or "")
             set_state("section_o_candidates", resp.get("candidates", []))
         except Exception as exc:
             _set_error(str(exc))
@@ -731,15 +728,6 @@ def render_step_o() -> None:
             st.json(brand_info_raw)
         # -----------------------------
 
-        _render_regen_panel(
-            section="O",
-            target_keys=["brand_name", "name_meaning", "slogan", "story_summary"],
-            regenerate_fn=lambda b, c, t: regenerate_o_field(brand_data, c, t),
-            context_data=brand_info_raw,
-            brand_info=BrandInfo(**brand_info_raw),
-            apply_target_data_key=None,
-        )
-
     if st.button("다음 단계: Section A", disabled=brand_info_raw is None, use_container_width=True):
         set_state("current_step", 1)
         st.rerun()
@@ -767,7 +755,11 @@ def render_step_a() -> None:
     if c2.button("생성 시작", use_container_width=True):
         try:
             _set_error(None)
-            res = generate_section_a(brand_info, get_state("interview_data_a") or "")
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("AI가 브랜드 철학과 스토리를 기획하고 있습니다... ✍️ (약 15~30초 소요)"):
+                res = generate_section_a(brand_info, get_state("interview_data_a") or "")
+                
             set_state("data_a", res.get("data_a", res))
             st.rerun()
         except Exception as exc:
@@ -817,7 +809,11 @@ def render_step_b() -> None:
     if c2.button("생성 시작", use_container_width=True):
         try:
             _set_error(None)
-            res = generate_section_b(brand_info, get_state("interview_data_a") or "", get_state("interview_data_b") or "")
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("AI가 핵심 타겟 페르소나와 고객 여정을 분석하고 있습니다... 🔍 (약 15~30초 소요)"):
+                res = generate_section_b(brand_info, get_state("interview_data_a") or "", get_state("interview_data_b") or "")
+                
             set_state("data_b", res.get("data_b", res))
             st.rerun()
         except Exception as exc:
@@ -836,14 +832,6 @@ def render_step_b() -> None:
         except Exception as exc:
             st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
             st.json(get_state("data_b"))
-        _render_regen_panel(
-            section="B",
-            target_keys=["target_audience", "key_characteristics", "primary_need", "pain_points", "awareness", "consideration", "decision", "retention"],
-            regenerate_fn=regenerate_b_field,
-            context_data=get_state("data_b") or {},
-            brand_info=brand_info,
-            apply_target_data_key="data_b",
-        )
 
     n1, n2 = st.columns(2)
     if n1.button("이전: A", use_container_width=True):
@@ -873,12 +861,16 @@ def render_step_c() -> None:
     if c2.button("생성 시작", use_container_width=True):
         try:
             _set_error(None)
-            res = generate_section_c(
-                brand_info,
-                get_state("interview_data_a") or "",
-                get_state("interview_data_b") or "",
-                get_state("interview_data_c") or "",
-            )
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("AI가 브랜드에 어울리는 비주얼 가이드와 폰트를 도출하고 있습니다... 🎨 (약 15~30초 소요)"):
+                res = generate_section_c(
+                    brand_info,
+                    get_state("interview_data_a") or "",
+                    get_state("interview_data_b") or "",
+                    get_state("interview_data_c") or "",
+                )
+                
             set_state("data_c", res.get("data_c", res))
             st.rerun()
         except Exception as exc:
@@ -897,14 +889,6 @@ def render_step_c() -> None:
         except Exception as exc:
             st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
             st.json(get_state("data_c"))
-        _render_regen_panel(
-            section="C",
-            target_keys=["primary_color", "secondary_color", "accent_color", "primary_font", "secondary_font", "photography_style", "illustration_style", "graphic_elements"],
-            regenerate_fn=regenerate_c_field,
-            context_data=get_state("data_c") or {},
-            brand_info=brand_info,
-            apply_target_data_key="data_c",
-        )
 
     n1, n2 = st.columns(2)
     if n1.button("이전: B", use_container_width=True):
@@ -940,14 +924,18 @@ def render_step_de() -> None:
     if c2.button("전체 생성 시작", use_container_width=True):
         try:
             _set_error(None)
-            res = generate_section_de(
-                brand_info,
-                data_c,
-                get_state("interview_data_a") or "",
-                get_state("interview_data_b") or "",
-                get_state("interview_data_c") or "",
-                get_state("interview_data_de") or "",
-            )
+            
+            # 🚀 추가된 로딩 UI
+            with st.spinner("AI가 로고 컨셉과 캐릭터 가이드를 구체화하고 있습니다... ✨ (약 20~40초 소요)"):
+                res = generate_section_de(
+                    brand_info,
+                    data_c,
+                    get_state("interview_data_a") or "",
+                    get_state("interview_data_b") or "",
+                    get_state("interview_data_c") or "",
+                    get_state("interview_data_de") or "",
+                )
+                
             set_state("data_de", res.get("data_de", res))
             st.rerun()
         except Exception as exc:
@@ -957,42 +945,42 @@ def render_step_de() -> None:
     if qpack.get("questions"):
         render_interview_card("DE", qpack, "interview_data_de")
 
-    r1, r2 = st.columns(2)
-    if r1.button("로고만 재생성", use_container_width=True):
-        try:
-            _set_error(None)
-            res = generate_logo_only(
-                brand_info,
-                data_c,
-                get_state("interview_data_a") or "",
-                get_state("interview_data_b") or "",
-                get_state("interview_data_c") or "",
-                get_state("interview_data_de") or "",
-            )
-            merged = dict(get_state("data_de") or {})
-            merged.update(res.get("data_de") or {})
-            set_state("data_de", merged)
-            st.rerun()
-        except Exception as exc:
-            _set_error(str(exc))
+    # r1, r2 = st.columns(2)
+    # if r1.button("로고만 재생성", use_container_width=True):
+    #     try:
+    #         _set_error(None)
+    #         res = generate_logo_only(
+    #             brand_info,
+    #             data_c,
+    #             get_state("interview_data_a") or "",
+    #             get_state("interview_data_b") or "",
+    #             get_state("interview_data_c") or "",
+    #             get_state("interview_data_de") or "",
+    #         )
+    #         merged = dict(get_state("data_de") or {})
+    #         merged.update(res.get("data_de") or {})
+    #         set_state("data_de", merged)
+    #         st.rerun()
+    #     except Exception as exc:
+    #         _set_error(str(exc))
 
-    if r2.button("캐릭터만 재생성", use_container_width=True):
-        try:
-            _set_error(None)
-            res = generate_character_only(
-                brand_info,
-                data_c,
-                get_state("interview_data_a") or "",
-                get_state("interview_data_b") or "",
-                get_state("interview_data_c") or "",
-                get_state("interview_data_de") or "",
-            )
-            merged = dict(get_state("data_de") or {})
-            merged.update(res.get("data_de") or {})
-            set_state("data_de", merged)
-            st.rerun()
-        except Exception as exc:
-            _set_error(str(exc))
+    # if r2.button("캐릭터만 재생성", use_container_width=True):
+    #     try:
+    #         _set_error(None)
+    #         res = generate_character_only(
+    #             brand_info,
+    #             data_c,
+    #             get_state("interview_data_a") or "",
+    #             get_state("interview_data_b") or "",
+    #             get_state("interview_data_c") or "",
+    #             get_state("interview_data_de") or "",
+    #         )
+    #         merged = dict(get_state("data_de") or {})
+    #         merged.update(res.get("data_de") or {})
+    #         set_state("data_de", merged)
+    #         st.rerun()
+    #     except Exception as exc:
+    #         _set_error(str(exc))
 
     data_de = get_state("data_de")
     if data_de:
@@ -1005,15 +993,6 @@ def render_step_de() -> None:
         except Exception as exc:
             st.warning(f"미리보기를 불러올 수 없어 텍스트로 표시합니다. (에러: {exc})")
             st.json(data_de)
-
-        _render_regen_panel(
-            section="DE",
-            target_keys=["logo_identity", "character_guide"],
-            regenerate_fn=regenerate_de_field,
-            context_data=data_de,
-            brand_info=brand_info,
-            apply_target_data_key="data_de",
-        )
 
     n1, n2 = st.columns(2)
     if n1.button("이전: C", use_container_width=True):
