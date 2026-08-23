@@ -395,6 +395,84 @@ def render_sidebar_editor() -> None:
         # [Section DE] 로고 및 캐릭터 전체 수정
         # ==========================================
         elif current_step == 4:
+
+            # ==========================================
+            # 🎨 사이드바에 시각적 에셋(로고/캐릭터) 띄우기
+            # ==========================================
+            data_de = get_state("data_de")
+            if data_de:
+                st.divider()
+                st.markdown("### 🎨 생성된 비주얼 에셋")
+                with st.expander("생성된 비주얼 에셋", expanded=False):
+                    # 1. 로고 이미지 경로 추출 및 렌더링
+                    logo_path = get_absolute_path(data_de.get('logo_path', None))
+                    if logo_path and os.path.exists(logo_path):
+                        st.caption("마스터 로고")
+                        st.image(logo_path, use_container_width=True)
+                        
+                        # ✨ 로고 재생성 버튼
+                        if st.button("🔄 로고만 재생성", use_container_width=True, key="regen_logo_sidebar"):
+                            try:
+                                brand_info_raw = get_state("brand_info")
+                                data_c = get_state("data_c")
+                                if brand_info_raw and data_c:
+                                    brand_info = BrandInfo(**brand_info_raw)
+                                    with st.spinner("새로운 로고 디자인을 구상하고 있습니다... 🎨 (약 20~30초 소요)"):
+                                        res = generate_logo_only(
+                                            brand_info,
+                                            data_c,
+                                            get_state("interview_data_a") or "",
+                                            get_state("interview_data_b") or "",
+                                            get_state("interview_data_c") or "",
+                                            get_state("interview_data_de") or "",
+                                        )
+                                        # 생성된 새 경로와 데이터를 기존 data_de에 덮어쓰기
+                                        merged = dict(data_de)
+                                        merged.update(res.get("data_de", {}))
+                                        merged["logo_path"] = res.get("logo_path")
+                                        set_state("data_de", merged)
+                                        st.rerun()
+                                else:
+                                    st.warning("이전 섹션(O, C) 데이터가 필요합니다.")
+                            except Exception as exc:
+                                st.error(f"로고 재생성 오류: {exc}")
+                    
+                    st.divider() # 로고와 캐릭터 사이의 얇은 구분선
+                    
+                    # 2. 캐릭터 이미지 경로 추출 및 렌더링
+                    char_path = get_absolute_path(data_de.get('char_path', None))
+                    if char_path and os.path.exists(char_path):
+                        st.caption("브랜드 캐릭터")
+                        st.image(char_path, use_container_width=True)
+                        
+                        # ✨ 캐릭터 재생성 버튼
+                        if st.button("🔄 캐릭터만 재생성", use_container_width=True, key="regen_char_sidebar"):
+                            try:
+                                brand_info_raw = get_state("brand_info")
+                                data_c = get_state("data_c")
+                                if brand_info_raw and data_c:
+                                    brand_info = BrandInfo(**brand_info_raw)
+                                    with st.spinner("새로운 캐릭터 디자인을 구상하고 있습니다... 🐣 (약 20~30초 소요)"):
+                                        res = generate_character_only(
+                                            brand_info,
+                                            data_c,
+                                            get_state("interview_data_a") or "",
+                                            get_state("interview_data_b") or "",
+                                            get_state("interview_data_c") or "",
+                                            get_state("interview_data_de") or "",
+                                        )
+                                        # 생성된 새 경로와 데이터를 기존 data_de에 덮어쓰기
+                                        merged = dict(data_de)
+                                        merged.update(res.get("data_de", {}))
+                                        merged["char_path"] = res.get("char_path")
+                                        set_state("data_de", merged)
+                                        st.rerun()
+                                else:
+                                    st.warning("이전 섹션(O, C) 데이터가 필요합니다.")
+                            except Exception as exc:
+                                st.error(f"캐릭터 재생성 오류: {exc}")
+
+            st.divider()
             data_de = get_state("data_de")
             if data_de:
                 st.subheader("Section DE 필드 전체 수정")
@@ -448,26 +526,6 @@ def render_sidebar_editor() -> None:
         
         elif current_step == 5:
             st.info("미리보기 화면입니다. 수정할 내용이 있다면 상단 버튼을 통해 이전 단계로 이동해주세요.")
-            
-            # ==========================================
-            # 🎨 사이드바에 시각적 에셋(로고/캐릭터) 띄우기
-            # ==========================================
-            data_de = get_state("data_de")
-            if data_de:
-                st.divider()
-                st.markdown("### 🎨 생성된 비주얼 에셋")
-                
-                # 1. 로고 이미지 경로 추출 및 렌더링
-                logo_path = get_absolute_path(data_de.get('logo_path', None))
-                if logo_path and os.path.exists(logo_path):
-                    st.caption("마스터 로고")
-                    st.image(logo_path, use_container_width=True)
-                
-                # 2. 캐릭터 이미지 경로 추출 및 렌더링
-                char_path = get_absolute_path(data_de.get('char_path', None))
-                if char_path and os.path.exists(char_path):
-                    st.caption("브랜드 캐릭터")
-                    st.image(char_path, use_container_width=True)
         
         st.divider()
         if st.button("워크플로우 전체 초기화", use_container_width=True, type="secondary"):

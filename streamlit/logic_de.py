@@ -66,7 +66,7 @@ def generate_logo_only(
 	previous_context = f"{interview_data_a} + {interview_data_b} + {interview_data_c}"
 	result = request_gemini_with_schema(
 		get_DE_identity_prompt(brand, data_c, previous_context, interview_data_de),
-		schema=DEResponseSchema,
+		schema=DEResponseSchema,	
 	)
 
 	logo_path = generate_logo_image(
