@@ -1292,7 +1292,7 @@ def render_step_preview() -> None:
                         "Contact (Optional)": [w3]
                     })
                     
-                    csv_file_path = "nametag_feedback.csv"
+                    csv_file_path = "streamlit/feedback/nametag_feedback.csv"
                     
                     # CSV 파일이 없으면 헤더 포함하여 생성, 있으면 맨 아래에 행 추가(append)
                     if not os.path.exists(csv_file_path):
