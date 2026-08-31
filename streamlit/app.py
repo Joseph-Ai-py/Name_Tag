@@ -13,6 +13,10 @@ import pandas as pd
 import os
 from datetime import datetime
 
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+
 from logic_a import generate_a_interview_questions, generate_section_a, regenerate_a_field
 from logic_b import generate_b_interview_questions, generate_section_b, regenerate_b_field
 from logic_c import generate_c_interview_questions, generate_section_c, regenerate_c_field
@@ -1276,29 +1280,18 @@ def render_step_preview() -> None:
             if w1 is None:
                 st.warning("별점을 먼저 선택해 주세요!")
             else:
-                # 피드백이 중복으로 들어가는 것을 방지 (세션 스테이트 활용)
                 if "feedback_submitted" not in st.session_state:
                     st.session_state.feedback_submitted = True
                     
-                    # 별점을 1~5점 척도로 보정 (0 -> 1점, 4 -> 5점)
                     star_score = w1 + 1
                     issues = ", ".join(w2) if w2 else "선택 안 함"
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
-                    # 저장할 데이터 프레임 구성
-                    new_feedback = pd.DataFrame({
-                        "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                        "Rating (Stars)": [star_score],
-                        "Issues": [issues],
-                        "Contact (Optional)": [w3]
-                    })
+                    # 구글 시트에 한 줄(Row) 추가하기 위해 리스트로 만듭니다
+                    new_row = [timestamp, star_score, issues, w3]
                     
-                    csv_file_path = "streamlit/feedback/nametag_feedback.csv"
-                    
-                    # CSV 파일이 없으면 헤더 포함하여 생성, 있으면 맨 아래에 행 추가(append)
-                    if not os.path.exists(csv_file_path):
-                        new_feedback.to_csv(csv_file_path, index=False, encoding='utf-8-sig')
-                    else:
-                        new_feedback.to_csv(csv_file_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+                    # append_row 함수가 자동으로 맨 아래 빈 줄에 데이터를 채워줍니다!
+                    worksheet.append_row(new_row)
                     
                     st.success("소중한 의견이 저장되었습니다! 다음 버전에 꼭 반영하겠습니다.")
                 else:
@@ -1392,4 +1385,12 @@ def run_app() -> None:
 
 
 if __name__ == "__main__":
+
+    scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+    client = gspread.authorize(creds)
+
+    sheet_url = "https://docs.google.com/spreadsheets/d/1hdCIAlH55moNxVL4SHRTewK2CKY9DHmYSoH5OSGzgkY/edit?hl=ko&pli=1&gid=0#gid=0"
+    doc = client.open_by_url(sheet_url)
+    worksheet = doc.sheet1 
     run_app()
