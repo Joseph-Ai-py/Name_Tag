@@ -1268,6 +1268,11 @@ def render_step_preview() -> None:
             "아쉬웠던 부분이 있다면 골라주세요.", 
             ["브랜드 정체성(질문·문구)", "로고 이미지", "캐릭터 이미지", "MVB 리포트", "PDF 파일", "생성 속도·오류", "괜찮았다"]
         )
+
+        w_comment = st.text_area(
+            "자유롭게 의견을 남겨주세요! (아쉬운 점, 바라는 점 등)", 
+            placeholder="여기에 자유롭게 작성해 주세요."
+        )
         
         # 조건부 UI: '괜찮았다'가 없거나 아쉬운 점을 하나라도 선택했을 때만 연락처 입력칸 노출
         show_contact = len(w2) > 0 and "괜찮았다" not in w2
@@ -1285,10 +1290,15 @@ def render_step_preview() -> None:
                     
                     star_score = w1 + 1
                     issues = ", ".join(w2) if w2 else "선택 안 함"
+                    
+                    # 🟢 추가된 부분: 자유 의견이 비어있으면 "작성 안 함"으로 처리
+                    comment_text = w_comment.strip() if w_comment.strip() else "작성 안 함"
+                    
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
-                    # 구글 시트에 한 줄(Row) 추가하기 위해 리스트로 만듭니다
-                    new_row = [timestamp, star_score, issues, w3]
+                    # 🟢 수정된 부분: new_row 리스트에 comment_text를 추가했습니다.
+                    # 순서: [시간, 별점, 아쉬운점선택, 자유의견, 연락처]
+                    new_row = [timestamp, star_score, issues, comment_text, w3]
                     
                     # append_row 함수가 자동으로 맨 아래 빈 줄에 데이터를 채워줍니다!
                     worksheet.append_row(new_row)
