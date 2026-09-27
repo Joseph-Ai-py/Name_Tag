@@ -79,9 +79,11 @@ def get_brand_gallery_prompt(brand_data: dict[str, Any]) -> str:
 }}"""
 
 
-def get_O_interview_prompt() -> str:
-    return """창업자가 브랜드의 초기 아이디어를 입력했습니다.
-당신의 다음 임무는 이 답변들을 바탕으로, 서로 완전히 다른 4개의 [브랜드 초안 후보(MVB)]를 생성하는 것입니다.
+def get_O_interview_prompt(brand_data: dict[str, Any] | None = None) -> str:
+    context = f"현재까지의 정보:\n{brand_data or {}}"
+    return _join_lines([context, """
+창업자가 브랜드의 초기 아이디어를 입력했습니다.
+당신의 다음 임무는 현재 정보에서 가장 중요한 빈칸을 찾아, 서로 완전히 다른 4개의 [브랜드 초안 후보(MVB)]를 생성하는 데 필요한 Adaptive Interview 질문을 만드는 것입니다.
 
 [최종적으로 당신이 다음 단계에서 생성해야 할 4가지 초안 항목]
 1. 브랜드명 및 의미: 타겟에 맞는 직관적이거나 감각적인 네이밍
@@ -111,7 +113,7 @@ def get_O_interview_prompt() -> str:
       ]
     }
       ]
-    }"""
+    }"""])
 
 
 def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
@@ -534,6 +536,59 @@ def get_B2_journey_prompt(brand_info: dict[str, Any], previous_context: str, dee
       "brand_action": "브랜드의 핵심 킬러 액션"
     }}
   ]
+}}"""
+
+
+def get_B4_customer_swot_prompt(brand_info: dict[str, Any], context: dict[str, Any], interview_data: str = "") -> str:
+    return f"""고객 관점의 SWOT를 작성하세요. 회사의 SWOT가 아니라, 브랜드의 핵심 고객이 이미 가진 자산과 결핍을 분석해야 합니다.
+
+[브랜드 정보]
+{brand_info}
+
+[확정된 전략과 고객 데이터]
+{context}
+
+[사용자 인터뷰]
+{interview_data}
+
+각 항목은 반드시 고객의 근거와 브랜드가 취할 대응, 기대 효과로 연결하세요. 시장 규모나 검증되지 않은 수치는 사실처럼 쓰지 마세요.
+JSON schema:
+{{
+  "strategic_reasoning": "SWOT 분석 근거",
+  "strengths": [{{"point":"고객 자산", "evidence":"관찰 근거", "implication":"전략적 의미"}}],
+  "weaknesses": [{{"point":"고객 결핍", "evidence":"관찰 근거", "implication":"전략적 의미"}}],
+  "opportunities": [{{"point":"열리는 가능성", "evidence":"관찰 근거", "implication":"전략적 의미"}}],
+  "threats": [{{"point":"이탈 요인", "evidence":"관찰 근거", "implication":"전략적 의미"}}],
+  "brand_responses": [{{"swot_type":"Weakness", "customer_issue":"고객 문제", "brand_response":"브랜드 대응", "expected_effect":"기대 효과"}}]
+}}"""
+
+
+def get_B5_business_model_prompt(brand_info: dict[str, Any], context: dict[str, Any], interview_data: str = "") -> str:
+    return f"""고객 전략을 검증 가능한 사업 모델 가설로 변환하세요.
+
+[브랜드 정보]
+{brand_info}
+
+[확정된 고객 전략과 SWOT]
+{context}
+
+[사용자 인터뷰]
+{interview_data}
+
+검증되지 않은 시장 규모, 전환율, 가격을 사실처럼 만들지 말고 모두 가설 또는 검증 필요 상태로 표현하세요. business_hypotheses는 최소 3개를 포함하세요.
+JSON schema:
+{{
+  "business_model_summary":"고객 가치에서 사업 가치로 이어지는 요약",
+  "customer_problem":{{"title":"고객 문제", "description":"문제", "rationale":"근거"}},
+  "value_proposition":{{"title":"가치 제안", "description":"제안", "rationale":"근거"}},
+  "free_experience":{{"title":"무료 경험", "description":"첫 경험", "rationale":"검증 논리"}},
+  "paid_value":{{"title":"유료 가치", "description":"지불 가치", "rationale":"검증 논리"}},
+  "revenue_streams":[{{"model":"수익 모델 가설", "customer_payment_reason":"지불 이유", "pricing_logic":"가격 검증 논리"}}],
+  "retention_loop":{{"title":"유지 루프", "description":"재방문 이유", "rationale":"근거"}},
+  "referral_loop":{{"title":"추천 루프", "description":"추천 이유", "rationale":"근거"}},
+  "cost_drivers":[{{"item":"비용 항목", "why_it_costs":"비용 이유"}}],
+  "key_channels":["채널"], "key_resources":["자원"], "key_partners":["파트너"],
+  "business_hypotheses":[{{"hypothesis":"가설", "why_it_matters":"중요성", "validation_method":"검증 방법"}}]
 }}"""
 
 

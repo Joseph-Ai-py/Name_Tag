@@ -8,12 +8,15 @@ import streamlit as st
 def default_state() -> dict[str, Any]:
 	return {
 		"brand_data": None,
+		"initial_idea": "",
 		"interview_data_o": "",
 		"brand_info": None,
 		"interview_data_a": "",
 		"data_a": None,
 		"interview_data_b": "",
 		"data_b": None,
+		"customer_swot": None,
+		"business_model": None,
 		"interview_data_c": "",
 		"data_c": None,
 		"interview_data_de": "",
@@ -23,6 +26,10 @@ def default_state() -> dict[str, Any]:
 		"error": None,
 		"interview_snapshots": {},
 		"applied_selections": {},
+		"interview_custom_inputs": {},
+		"decision_traces": [],
+		"brand_dna": None,
+		"integrity_report": None,
 	}
 
 

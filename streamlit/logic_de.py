@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from gemini_client import request_gemini_text_flash_lite, request_gemini_with_schema
@@ -23,10 +24,22 @@ def generate_section_de(
 	interview_data_b: str,
 	interview_data_c: str,
 	interview_data_de: str,
+	data_a: dict[str, Any] | None = None,
+	data_b: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
 	_ = CResponseSchema(**data_c)
 	brand = brand_info.model_dump()
-	previous_context = f"{interview_data_a} + {interview_data_b} + {interview_data_c}"
+	previous_context = json.dumps(
+		{
+			"section_a_result": data_a or {},
+			"section_b_result": data_b or {},
+			"section_c_result": data_c,
+			"section_a_interview": interview_data_a,
+			"section_b_interview": interview_data_b,
+			"section_c_interview": interview_data_c,
+		},
+		ensure_ascii=False,
+	)
 
 	result = request_gemini_with_schema(
 		get_DE_identity_prompt(brand, data_c, previous_context, interview_data_de),

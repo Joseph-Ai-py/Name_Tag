@@ -19,6 +19,7 @@ from datetime import datetime
 
 from logic_a import generate_a_interview_questions, generate_section_a, regenerate_a_field
 from logic_b import generate_b_interview_questions, generate_section_b, regenerate_b_field
+from brand_dna import build_brand_dna, build_trace, check_brand_integrity
 from logic_c import generate_c_interview_questions, generate_section_c, regenerate_c_field
 from logic_de import (
     generate_character_only,
@@ -123,6 +124,34 @@ def _set_error(message: str | None) -> None:
     set_state("error", message)
 
 
+def _refresh_brand_dna() -> None:
+    brand_info = get_state("brand_info")
+    if not brand_info:
+        return
+    dna = build_brand_dna(
+        brand_info,
+        get_state("data_a") or {},
+        get_state("data_b") or {},
+        get_state("data_c") or {},
+        get_state("data_de") or {},
+    )
+    set_state("brand_dna", dna)
+    set_state(
+        "integrity_report",
+        check_brand_integrity(
+            brand_info,
+            dna,
+            {
+                "brand_info": brand_info,
+                "data_a": get_state("data_a"),
+                "data_b": get_state("data_b"),
+                "data_c": get_state("data_c"),
+                "data_de": get_state("data_de"),
+            },
+        ),
+    )
+
+
 def _render_error() -> None:
     err = get_state("error")
     if err:
@@ -217,6 +246,19 @@ def render_sidebar_editor() -> None:
                     brand_info["seed_color"] = new_color # 🌟 변경된 색상 저장 로직 추가
                     
                     set_state("brand_info", brand_info)
+                    set_state("decision_traces", [
+                        *(get_state("decision_traces") or []),
+                        build_trace(
+                            "O",
+                            "brand_foundation_edit",
+                            f"{new_name} / {new_slogan}",
+                            "사용자가 확정 브랜드 기초 정보를 직접 수정함",
+                            new_name,
+                            "Sidebar 편집",
+                            status="user_edited",
+                        ),
+                    ])
+                    _refresh_brand_dna()
                     st.success("저장 완료!")
                     st.rerun()
             else:
@@ -321,6 +363,23 @@ def render_sidebar_editor() -> None:
                     new_pain = st.text_area("결핍과 욕망", value=prim.get("pain_point_and_desire", ""), height=120)
                     new_deal = st.text_input("구매 포기 트리거 (Deal Breaker)", value=prim.get("deal_breaker", ""))
 
+                with st.expander("3. Customer SWOT", expanded=False):
+                    swot = target_b.get("customer_swot", {})
+                    new_swot_reasoning = st.text_area("SWOT 분석 근거", value=swot.get("strategic_reasoning", ""), height=90)
+                    new_swot_summary = st.text_area(
+                        "핵심 고객 문제 요약",
+                        value="\n".join(item.get("point", "") for item in swot.get("weaknesses", [])),
+                        height=90,
+                    )
+
+                with st.expander("4. Business Model", expanded=False):
+                    business_model = target_b.get("business_model", {})
+                    new_business_summary = st.text_area(
+                        "사업 모델 요약",
+                        value=business_model.get("business_model_summary", ""),
+                        height=100,
+                    )
+
                 if st.button("Section B 전체 저장", use_container_width=True, type="primary"):
                     # 1. 타겟 정의 및 근거 저장
                     target_b["strategic_reasoning"] = new_reasoning
@@ -334,6 +393,9 @@ def render_sidebar_editor() -> None:
                     target_b.setdefault("primary_persona", {})["daily_scene"] = new_scene
                     target_b.setdefault("primary_persona", {})["pain_point_and_desire"] = new_pain
                     target_b.setdefault("primary_persona", {})["deal_breaker"] = new_deal
+                    target_b.setdefault("customer_swot", {})["strategic_reasoning"] = new_swot_reasoning
+                    target_b.setdefault("customer_swot", {})["editor_note"] = new_swot_summary
+                    target_b.setdefault("business_model", {})["business_model_summary"] = new_business_summary
                     
                     # 껍질 유지하며 저장
                     if isinstance(data_b, dict) and "data_b" in data_b:
@@ -342,6 +404,19 @@ def render_sidebar_editor() -> None:
                         data_b = target_b
                         
                     set_state("data_b", data_b)
+                    set_state("decision_traces", [
+                        *(get_state("decision_traces") or []),
+                        build_trace(
+                            "B",
+                            "customer_strategy_edit",
+                            new_swot_summary,
+                            "사용자가 고객 전략을 직접 수정함",
+                            "Customer SWOT / Business Model",
+                            "사용자 편집값은 AI 결과보다 우선합니다.",
+                            status="user_edited",
+                        ),
+                    ])
+                    _refresh_brand_dna()
                     st.success("Section B 전체 저장 완료!")
                     st.rerun()
             else:
@@ -592,7 +667,7 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
 
     answers_key = f"{section}_answers"
     idx_key = f"{section}_current_idx"
-    custom_key = f"{section}_custom_input"
+    custom_inputs = dict(get_state("interview_custom_inputs") or {})
 
     answers = _ensure_list_state(answers_key, len(questions))
     current_idx = int(get_state(idx_key) or 0)
@@ -625,20 +700,21 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
                 set_state(answers_key, answers)
                 st.rerun()
 
-        st.text_input(
+        custom_value = st.text_input(
             "직접 입력(선택)",
-            value=str(get_state(custom_key) or ""),
-            key=f"{section}_custom_field",
+            value=str(custom_inputs.get(f"{section}:{current_idx}", "")),
+            key=f"{section}_custom_field_{current_idx}",
             placeholder="선택지가 아니라 직접 작성하고 싶으면 입력",
         )
 
         c1, c2, c3 = st.columns(3)
         if c1.button("직접 입력 저장", key=f"{section}_custom_save"):
-            value = st.session_state.get(f"{section}_custom_field", "").strip()
+            value = custom_value.strip()
             if value:
                 answers[current_idx] = value
                 set_state(answers_key, answers)
-                set_state(custom_key, value)
+                custom_inputs[f"{section}:{current_idx}"] = value
+                set_state("interview_custom_inputs", custom_inputs)
                 st.success("현재 질문 답변으로 저장했습니다.")
                 st.rerun()
 
@@ -656,6 +732,17 @@ def render_interview_card(section: str, question_pack: dict[str, Any], output_st
             else:
                 formatted = _format_interview_answers(questions, answers)
                 set_state(output_state_key, formatted)
+                trace = build_trace(
+                    stage=section,
+                    decision_type="interview_answer",
+                    user_input=formatted,
+                    ai_interpretation=question_pack.get("reasoning", ""),
+                    brand_decision="사용자 답변을 다음 생성 단계의 결정 근거로 저장",
+                    rationale="Adaptive Interview에서 사용자가 직접 선택하거나 입력한 답변입니다.",
+                    question_ids=[int(item.get("question_id", index + 1)) for index, item in enumerate(questions)],
+                    status="user_confirmed",
+                )
+                set_state("decision_traces", [*(get_state("decision_traces") or []), trace])
                 st.success("인터뷰 답변 저장 완료")
                 
                 if section == "O":
@@ -766,6 +853,12 @@ def render_step_o() -> None:
     "플레이풀", "다크", "스트릿", "한국·전통"]
 
     c1, c2 = st.columns(2)
+    initial_idea = st.text_area(
+        "만들고 싶은 브랜드/서비스를 자유롭게 이야기해주세요.",
+        value=str(raw.get("initial_idea", "")),
+        placeholder="예: 유튜브 시청 기록을 분석해서 내가 어떤 사람인지 보여주는 서비스를 만들고 싶어요.",
+        height=120,
+    )
     with c1:
         business_type = st.text_input("업종 / 서비스", value=raw.get("business_type", ""), placeholder="예: 프리미엄 베이커리")
     with c2:
@@ -803,10 +896,16 @@ def render_step_o() -> None:
             st.rerun()
 
     vibes = current_vibes
-    brand_data = BrandData(business_type=business_type, target=target, keywords=keywords, vibes=vibes)
+    brand_data = BrandData(
+        business_type=business_type,
+        target=target,
+        keywords=keywords,
+        vibes=vibes,
+        initial_idea=initial_idea,
+    )
     set_state("brand_data", brand_data.model_dump())
 
-    can_interview = len(business_type.strip()) > 1 and len(target.strip()) > 1
+    can_interview = len(initial_idea.strip()) > 10 or (len(business_type.strip()) > 1 and len(target.strip()) > 1)
     can_generate_candidates = len((get_state("interview_data_o") or "").strip()) > 0
 
     st.markdown("<br>", unsafe_allow_html=True) # 여백 추가
@@ -881,6 +980,23 @@ def render_step_o() -> None:
                     },
                 )
                 set_state("brand_info", brand_info.model_dump())
+                set_state("decision_traces", [
+                    *(get_state("decision_traces") or []),
+                    build_trace(
+                        "O",
+                        "brand_foundation",
+                        " / ".join([
+                            candidates[name_idx].get("brand_name", ""),
+                            candidates[meaning_idx].get("name_meaning", ""),
+                            candidates[slogan_idx].get("slogan", ""),
+                        ]),
+                        "사용자가 AI 추천 후보를 조합해 브랜드의 출발점을 선택함",
+                        brand_info.brand_name,
+                        "사용자 조합 확정",
+                        status="user_confirmed",
+                    ),
+                ])
+                _refresh_brand_dna()
                 st.success("브랜드 조합이 확정되었습니다.")
                 st.rerun()
             except Exception as exc:
@@ -938,6 +1054,7 @@ def render_step_a() -> None:
                 res = generate_section_a(brand_info, get_state("interview_data_a") or "")
                 
             set_state("data_a", res.get("data_a", res))
+            _refresh_brand_dna()
             st.rerun()
         except Exception as exc:
             _set_error(str(exc))
@@ -993,9 +1110,15 @@ def render_step_b() -> None:
             
             # 🚀 추가된 로딩 UI
             with st.spinner("AI가 핵심 타겟 페르소나와 고객 여정을 분석하고 있습니다... 🔍 (약 15~30초 소요)"):
-                res = generate_section_b(brand_info, get_state("interview_data_a") or "", get_state("interview_data_b") or "")
+                res = generate_section_b(
+                    brand_info,
+                    get_state("interview_data_a") or "",
+                    get_state("interview_data_b") or "",
+                    get_state("data_a") or {},
+                )
                 
             set_state("data_b", res.get("data_b", res))
+            _refresh_brand_dna()
             st.rerun()
         except Exception as exc:
             _set_error(str(exc))
@@ -1054,9 +1177,12 @@ def render_step_c() -> None:
                     get_state("interview_data_a") or "",
                     get_state("interview_data_b") or "",
                     get_state("interview_data_c") or "",
+                    get_state("data_a") or {},
+                    get_state("data_b") or {},
                 )
                 
             set_state("data_c", res.get("data_c", res))
+            _refresh_brand_dna()
             st.rerun()
         except Exception as exc:
             _set_error(str(exc))
@@ -1124,9 +1250,12 @@ def render_step_de() -> None:
                     get_state("interview_data_b") or "",
                     get_state("interview_data_c") or "",
                     get_state("interview_data_de") or "",
+                    get_state("data_a") or {},
+                    get_state("data_b") or {},
                 )
                 
             set_state("data_de", res.get("data_de", res))
+            _refresh_brand_dna()
             st.rerun()
         except Exception as exc:
             _set_error(str(exc))
@@ -1205,6 +1334,8 @@ def render_step_preview() -> None:
     data_b = get_state("data_b")
     data_c = get_state("data_c")
     data_de = get_state("data_de")
+    brand_dna = get_state("brand_dna") or {}
+    integrity_report = get_state("integrity_report") or {"status": "NOT_CHECKED", "issues": []}
 
     if not brand_info:
         st.info("브랜드 정보가 없습니다. Section O를 먼저 완료해 주세요.")
@@ -1238,10 +1369,52 @@ def render_step_preview() -> None:
             "DE": bool(data_de),
         })
 
-    if st.button("PDF 생성", disabled=not is_ready, use_container_width=True):
+    st.subheader("Brand DNA")
+    if brand_dna:
+        for section in ["foundation", "why", "who", "promise", "position", "voice", "visual", "behavior", "business"]:
+            with st.expander(section.upper(), expanded=section == "foundation"):
+                st.json(brand_dna.get(section, {}))
+
+    st.subheader("Brand Decision Map")
+    traces = get_state("decision_traces") or []
+    if traces:
+        for trace in traces:
+            st.markdown(
+                f"**{trace.get('stage', '')} · {trace.get('decision_type', '')}**  \n"
+                f"사용자 답변: {trace.get('user_input', '')}  \n"
+                f"AI 해석: {trace.get('ai_interpretation', '')}  \n"
+                f"브랜드 결정: {trace.get('brand_decision', '')}  \n"
+                f"상태: `{trace.get('status', '')}`"
+            )
+    else:
+        st.info("아직 기록된 브랜드 결정이 없습니다.")
+
+    status = integrity_report.get("status", "NOT_CHECKED")
+    if status == "PASS":
+        st.success("Brand Integrity Check · Consistent")
+    elif status == "WARNING":
+        st.warning("Brand Integrity Check · Review recommended")
+    elif status == "FAIL":
+        st.error("Brand Integrity Check · 수정이 필요한 불일치가 있습니다.")
+        st.json(integrity_report.get("issues", []))
+
+    integrity_failed = integrity_report.get("status") == "FAIL"
+    if integrity_failed:
+        st.error("Integrity 검사에서 FAIL이 발견되어 PDF 생성을 잠시 막았습니다. 문제 필드를 수정한 뒤 다시 검사해 주세요.")
+
+    if st.button("PDF 생성", disabled=not is_ready or integrity_failed, use_container_width=True):
         try:
             _set_error(None)
-            pdf_bytes = generate_pdf_bytes(brand_info, data_a, data_b, data_c, data_de)
+            pdf_bytes = generate_pdf_bytes(
+                brand_info,
+                data_a,
+                data_b,
+                data_c,
+                data_de,
+                get_state("brand_dna") or {},
+                get_state("integrity_report") or {},
+                get_state("decision_traces") or [],
+            )
             set_state("pdf_bytes", pdf_bytes)
             st.success("PDF 생성 완료")
         except Exception as exc:

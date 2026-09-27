@@ -17,6 +17,8 @@ from pdf_builder import (
     build_b1_target_profile,
     build_b2_persona_detail,
     build_b3_customer_journey,
+    build_b4_customer_swot,
+    build_b5_business_model,
     build_c1_color_system,
     build_c2_typography,
     build_c3_visual_mood,
@@ -31,17 +33,35 @@ def generate_pdf_bytes(
 	data_b: dict,
 	data_c: dict,
 	data_de: dict,
+    brand_dna: dict | None = None,
+    integrity_report: dict | None = None,
+    decision_traces: list[dict] | None = None,
 ) -> bytes:
-	try:
-		from weasyprint import HTML
-	except (ImportError, OSError) as exc:
-		raise RuntimeError(
-			"Unable to import WeasyPrint. Install system dependencies such as libcairo2, "
-			"libgobject-2.0-0, and libpango."
-		) from exc
+    try:
+        from weasyprint import HTML
+    except (ImportError, OSError) as exc:
+        print(f"[PDF] WeasyPrint import failed: {exc}")
+        raise RuntimeError(
+            "WeasyPrint를 불러오지 못했습니다. PDF 실행 환경의 WeasyPrint 및 시스템 라이브러리를 확인해 주세요."
+        ) from exc
 
-	html_content = assemble_html(brand_info, data_a, data_b, data_c, data_de)
-	return HTML(string=html_content).write_pdf()
+    try:
+        html_content = assemble_html(brand_info, data_a, data_b, data_c, data_de, brand_dna, integrity_report, decision_traces)
+        print(f"[PDF] HTML build completed ({len(html_content)} chars)")
+    except Exception as exc:
+        print(f"[PDF] HTML generation failed: {exc}")
+        raise RuntimeError("PDF용 HTML을 생성하지 못했습니다.") from exc
+
+    try:
+        pdf_bytes = HTML(
+            string=html_content,
+            base_url=get_absolute_path('/assets/'),
+        ).write_pdf()
+        print(f"[PDF] rendering completed ({len(pdf_bytes)} bytes)")
+        return pdf_bytes
+    except Exception as exc:
+        print(f"[PDF] PDF rendering failed: {exc}")
+        raise RuntimeError("PDF 렌더링에 실패했습니다. 이미지 경로와 PDF 실행 환경을 확인해 주세요.") from exc
 
 
 def build_download_filename(brand_name: str) -> str:
@@ -152,6 +172,8 @@ def generate_b_only_html(brand_info: dict, data_b: dict) -> str:
         html += build_b1_target_profile(data_b)
         html += build_b2_persona_detail(data_b)
         html += build_b3_customer_journey(data_b)
+        html += build_b4_customer_swot(data_b)
+        html += build_b5_business_model(data_b)
         
     html += "</body>\n</html>"
     return html

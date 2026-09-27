@@ -5,16 +5,15 @@ import os
 def get_absolute_path(url_path):
     """
     웹 브라우저용 상대 경로(/assets/...)를 PDF 변환기(WeasyPrint)가 읽을 수 있는 
-    서버의 물리적 절대 경로(예: C:\...\backend\assets\...)로 변환합니다.
+    서버의 물리적 절대 경로(예: 프로젝트/assets/...)로 변환합니다.
     """
     if not url_path:
         return None
         
     if url_path.startswith('/assets/'):
-        # 현재 파일(builder.py) 위치를 기준으로 프로젝트 최상위 폴더 찾기
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        # base_dir과 url_path를 안전하게 결합
-        return os.path.join(base_dir, url_path.strip('/'))
+      # 생성된 이미지는 Streamlit 구현의 assets 디렉터리에 저장됩니다.
+      assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
+      return os.path.join(assets_dir, url_path.removeprefix('/assets/'))
         
     return url_path
 
@@ -197,7 +196,7 @@ def build_css(seed_color, sd_color, sl_color):
     """
 
 # 들어온 데이터(O, A, B, C, D, E)의 유무를 판단하여 전체 14페이지 분량의 HTML 문서를 유연하게 조립(레고 블록)하는 메인 통제소
-def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=None):
+def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=None, brand_dna=None, integrity_report=None, decision_traces=None):
     
     # 프론트엔드에서 씌운 이중 껍질(data_a, data_b 등) 안전하게 벗겨내기
     if data_A and 'data_a' in data_A: data_A = data_A['data_a']
@@ -263,6 +262,8 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
         html += build_b1_target_profile(data_B)
         html += build_b2_persona_detail(data_B)
         html += build_b3_customer_journey(data_B)
+        html += build_b4_customer_swot(data_B)
+        html += build_b5_business_model(data_B)
 
     if data_C:
         html += build_c1_color_system(data_C)
@@ -273,10 +274,45 @@ def assemble_html(brand_info, data_A=None, data_B=None, data_C=None, data_DE=Non
         html += build_d_logo_identity(data_DE, logo_path)
         html += build_e_character_guide(data_DE, char_path)
 
-    html += "</body>\n</html>"
-    print(f"html_2 : {html}")
+    if brand_dna:
+        html += build_brand_dna_summary(brand_dna, integrity_report or {}, decision_traces or [])
 
+    html += "</body>\n</html>"
     return html
+
+
+def _list_cards(items, label):
+    cards = ""
+    for item in items or []:
+      if isinstance(item, dict):
+        cards += f"<div class='card'><div class='c-ttl'>{e(item.get('point', item.get('title', '')))}</div><div class='c-body'>{e(item.get('evidence', item.get('description', '')))}</div><div class='c-body' style='color:var(--sd); margin-top:6px;'>{e(item.get('implication', item.get('rationale', '')))}</div></div>"
+    return cards or f"<div class='card'><div class='c-body'>{label} 데이터가 아직 없습니다.</div></div>"
+
+
+def build_b4_customer_swot(B_data):
+    data = B_data.get('data_b', B_data) if isinstance(B_data, dict) else {}
+    columns = [("Strengths", "강점", data.get("strengths", [])), ("Weaknesses", "약점", data.get("weaknesses", [])), ("Opportunities", "기회", data.get("opportunities", [])), ("Threats", "위협", data.get("threats", []))]
+    quadrants = "".join(f"<div><div class='c-lbl'>{title} · {ko}</div>{_list_cards(items, ko)}</div>" for title, ko, items in columns)
+    responses = "".join(f"<div class='promise-block'><div class='ch'>{e(item.get('swot_type', ''))} · {e(item.get('customer_issue', ''))}</div><div class='ct'><b>Brand Response:</b> {e(item.get('brand_response', ''))}<br><b>Expected Effect:</b> {e(item.get('expected_effect', ''))}</div></div>" for item in data.get('brand_responses', []))
+    return f"""<div class='section'><div class='sec-hdr'><span class='sec-num'>Section B-4 · Customer SWOT</span><span class='sec-title'>고객의 현재 상태와 전략적 대응</span><span class='sec-sub'>{e(data.get('strategic_reasoning', ''))}</span></div><div class='grid-2'>{quadrants}</div><div class='c-lbl'>Strategic Response · 브랜드 대응</div>{responses or '<div class="card">등록된 대응이 없습니다.</div>'}</div>"""
+
+
+def build_b5_business_model(B_data):
+    data = B_data.get('data_b', B_data) if isinstance(B_data, dict) else {}
+    keys = [("Customer Problem", "customer_problem"), ("Value Proposition", "value_proposition"), ("Free Experience", "free_experience"), ("Paid Value", "paid_value"), ("Retention", "retention_loop"), ("Referral", "referral_loop")]
+    flow = "".join(f"<div class='card'><div class='c-lbl'>{label}</div><div class='c-ttl'>{e(data.get(key, {}).get('title', ''))}</div><div class='c-body'>{e(data.get(key, {}).get('description', ''))}</div></div>" for label, key in keys)
+    hypotheses = "".join(f"<div class='promise-block'><div class='ch'>Hypothesis</div><div class='ct'>{e(item.get('hypothesis', ''))}<br><b>Why:</b> {e(item.get('why_it_matters', ''))}<br><b>Validation:</b> {e(item.get('validation_method', ''))}</div></div>" for item in data.get('business_hypotheses', []))
+    return f"""<div class='section'><div class='sec-hdr'><span class='sec-num'>Section B-5 · Business Model</span><span class='sec-title'>고객 가치에서 사업 가치로</span><span class='sec-sub'>{e(data.get('business_model_summary', '검증 전 사업 모델 가설'))}</span></div><div class='grid-2'>{flow}</div><div class='c-lbl'>Business Hypotheses · 검증이 필요한 가설</div>{hypotheses or '<div class="card">등록된 사업 가설이 없습니다.</div>'}</div>"""
+
+
+def build_brand_dna_summary(dna, integrity_report, decision_traces=None):
+    sections = []
+    for key in ["why", "who", "promise", "position", "voice", "visual", "behavior", "business"]:
+      value = dna.get(key, {}) if isinstance(dna, dict) else {}
+      sections.append(f"<div class='card'><div class='c-lbl'>{e(key.upper())}</div><div class='c-body'>{e(value)}</div></div>")
+    status = e(integrity_report.get('status', 'NOT_CHECKED'))
+    trace_html = "".join(f"<div class='promise-block'><div class='ch'>{e(trace.get('stage', ''))} · {e(trace.get('status', ''))}</div><div class='ct'><b>User:</b> {e(trace.get('user_input', ''))}<br><b>Interpretation:</b> {e(trace.get('ai_interpretation', ''))}<br><b>Decision:</b> {e(trace.get('brand_decision', ''))}</div></div>" for trace in (decision_traces or []))
+    return f"""<div class='section'><div class='sec-hdr'><span class='sec-num'>Brand DNA · Decision Summary</span><span class='sec-title'>브랜드 DNA 한 장 요약</span><span class='sec-sub'>사용자의 결정과 단계별 결과를 통합한 canonical source of truth입니다.</span></div><div class='grid-2'>{''.join(sections)}</div><div class='c-lbl'>Brand Decision Map</div>{trace_html or '<div class="card">기록된 Decision Trace가 없습니다.</div>'}<div class='hl-box'><b>Brand Integrity Check · {status}</b></div></div>"""
 
 # HTML 이스케이프 함수: 브랜드 정보나 AI 분석 결과에 특수문자가 포함되어 있을 때 레이아웃이 깨지는 것을 방지하기 위해 사용합니다.
 def e(text):

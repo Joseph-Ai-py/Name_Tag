@@ -10,6 +10,7 @@ class BrandData(BaseModel):
 	vibes: list[str]
 	target: str
 	keywords: str = ""
+	initial_idea: str = ""
 
 
 class BrandInfo(BaseModel):
@@ -219,4 +220,104 @@ class CharacterGuide(BaseModel):
 class DEResponseSchema(BaseModel):
 	logo_identity: LogoIdentity
 	character_guide: CharacterGuide
+
+
+class DecisionTrace(BaseModel):
+	trace_id: str
+	stage: str
+	decision_type: str
+	user_input: str
+	ai_interpretation: str
+	brand_decision: str
+	rationale: str
+	source_question_ids: list[int] = Field(default_factory=list)
+	status: str = "ai_derived"
+
+
+class BrandDNA(BaseModel):
+	foundation: dict[str, Any] = Field(default_factory=dict)
+	why: dict[str, Any] = Field(default_factory=dict)
+	who: dict[str, Any] = Field(default_factory=dict)
+	promise: dict[str, Any] = Field(default_factory=dict)
+	position: dict[str, Any] = Field(default_factory=dict)
+	voice: dict[str, Any] = Field(default_factory=dict)
+	visual: dict[str, Any] = Field(default_factory=dict)
+	behavior: dict[str, Any] = Field(default_factory=dict)
+	business: dict[str, Any] = Field(default_factory=dict)
+
+
+class CustomerSWOTItem(BaseModel):
+	point: str
+	evidence: str
+	implication: str
+
+
+class CustomerSWOTResponse(BaseModel):
+	swot_type: str
+	customer_issue: str
+	brand_response: str
+	expected_effect: str
+
+
+class CustomerSWOTResponseSchema(BaseModel):
+	strategic_reasoning: str
+	strengths: list[CustomerSWOTItem]
+	weaknesses: list[CustomerSWOTItem]
+	opportunities: list[CustomerSWOTItem]
+	threats: list[CustomerSWOTItem]
+	brand_responses: list[CustomerSWOTResponse]
+
+
+class BusinessModelItem(BaseModel):
+	title: str
+	description: str
+	rationale: str
+
+
+class RevenueStream(BaseModel):
+	model: str
+	customer_payment_reason: str
+	pricing_logic: str
+
+
+class CostDriver(BaseModel):
+	item: str
+	why_it_costs: str
+
+
+class BusinessHypothesis(BaseModel):
+	hypothesis: str
+	why_it_matters: str
+	validation_method: str
+
+
+class BusinessModelResponseSchema(BaseModel):
+	business_model_summary: str
+	customer_problem: BusinessModelItem
+	value_proposition: BusinessModelItem
+	free_experience: BusinessModelItem
+	paid_value: BusinessModelItem
+	revenue_streams: list[RevenueStream]
+	retention_loop: BusinessModelItem
+	referral_loop: BusinessModelItem
+	cost_drivers: list[CostDriver]
+	key_channels: list[str]
+	key_resources: list[str]
+	key_partners: list[str]
+	business_hypotheses: list[BusinessHypothesis]
+
+
+class IntegrityIssue(BaseModel):
+	severity: str
+	category: str
+	source_stage: str
+	field: str
+	problematic_text: str
+	reason: str
+	suggested_fix: str
+
+
+class BrandIntegrityReport(BaseModel):
+	status: str
+	issues: list[IntegrityIssue] = Field(default_factory=list)
 

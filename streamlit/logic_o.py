@@ -44,12 +44,12 @@ def build_base_prompt(brand_data: BrandData, core_prompt: str, brand_name: str =
 - 타겟 고객: {brand_data.target}
 - 확정된 브랜드명: {brand_name}
 - 추가 키워드: {brand_data.keywords or '없음'}
+- 사용자의 초기 아이디어: {brand_data.initial_idea or '아직 입력되지 않음'}
 """ + core_prompt
 
 
 def generate_o_interview_questions(brand_data: BrandData) -> dict[str, Any]:
-	_ = brand_data
-	return request_gemini_with_schema(get_O_interview_prompt(), schema=InterviewResponseSchema)
+	return request_gemini_with_schema(get_O_interview_prompt(brand_data.model_dump()), schema=InterviewResponseSchema)
 
 
 def generate_o_candidates(brand_data: BrandData, interview_text: str) -> dict[str, Any]:
