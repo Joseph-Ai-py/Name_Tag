@@ -347,7 +347,7 @@ def get_A_interview_prompt(brand_info: dict[str, Any]) -> str:
     {{
       "question_id": 1,
       "question_text": "질문 내용",
-      [
+      "options": [
         "1. 선택지 A",
         "2. 선택지 B",
         "3. 선택지 C",
@@ -377,12 +377,12 @@ def get_A1_philosophy_prompt(brand_info: dict[str, Any], deepdive_answers_text: 
   "brand_philosophy": {{
     "manifesto": "철학 선언문 (1~2문단)",
     "raison_detre": "브랜드 존재 이유 (1문장)",
-    [
+    "stand_against": [
       "반대하는 것 1",
       "반대하는 것 2",
       "반대하는 것 3"
     ],
-    [
+    "stand_for": [
       "지지하고 실천하는 가치 1",
       "지지하고 실천하는 가치 2",
       "지지하고 실천하는 가치 3"
@@ -435,12 +435,12 @@ def get_A2_story_prompt(brand_info: dict[str, Any], deepdive_answers_text: str =
 {{
   "naming_expansion": {{
     "name_story": "탄생 스토리 (100자 이상)",
-    [
+    "domain_suggestions": [
       "추천도메인1.com",
       "추천도메인2.co.kr",
       "추천도메인3.co.kr"
     ],
-    [
+    "sns_handles": [
       "@추천핸들1",
       "@추천핸들2",
       "@추천핸들3"
@@ -600,7 +600,7 @@ def get_B_interview_prompt(brand_info: dict[str, Any]) -> str:
     {{
       "question_id": 1,
       "question_text": "타겟 고객의 가장 중요한 라이프스타일/결핍은 무엇입니까?",
-      [
+      "options": [
         "1. ...",
         "2. ...",
         "3. ...",
@@ -637,7 +637,7 @@ def get_B1_persona_prompt(brand_info: dict[str, Any], previous_context: str, dee
   "core_target_group": {{
     "definition": "마케팅 과녁이 될 핵심 타겟 1줄 정의",
     "demographics": "광고 세팅용 인구통계 (연령, 성별, 직업, 가구형태)",
-    [
+    "lifestyle_keywords": [
       "키워드1",
       "키워드2",
       "키워드3",
@@ -651,7 +651,7 @@ def get_B1_persona_prompt(brand_info: dict[str, Any], previous_context: str, dee
     "age_and_job": "나이 및 구체적인 직업",
     "daily_scene": "마케팅 타이밍을 잡기 위한 결정적 씬 묘사",
     "pain_point_and_desire": "현재 겪고 있는 결핍과 우리 브랜드를 통한 해결 욕구",
-    [
+    "emotional_needs": [
       "정서적 니즈 1",
       "정서적 니즈 2",
       "정서적 니즈 3"
@@ -780,7 +780,7 @@ def get_C_interview_prompt(brand_info: dict[str, Any]) -> str:
     {{
       "question_id": 1,
       "question_text": "브랜드의 시각 무드를 가장 잘 설명하는 방향은 무엇입니까?",
-      [
+      "options": [
         "1. 정갈하고 고급스러운 방향",
         "2. 따뜻하고 친근한 방향",
         "3. 자연스럽고 지속가능한 방향",
@@ -880,17 +880,17 @@ def get_C3_visual_mood_prompt(brand_info: dict[str, Any], deepdive_answers_text:
 
 {{
   "visual_mood_guide": {{
-    [
+    "photography_do": [
       "권장 표현 1",
       "권장 표현 2",
       "권장 표현 3"
     ],
-    [
+    "photography_dont": [
       "금지 표현 1",
       "금지 표현 2",
       "금지 표현 3"
     ],
-    [
+    "mood_keywords": [
       "키워드 1",
       "키워드 2",
       "키워드 3",
@@ -1197,17 +1197,17 @@ def get_C1_visual_identity_prompt(
     }}
   }},
   "visual_mood_guide": {{
-    [
+    "photography_do": [
       "권장 표현 1",
       "권장 표현 2",
       "권장 표현 3"
     ],
-    [
+    "photography_dont": [
       "금지 표현 1",
       "금지 표현 2",
       "금지 표현 3"
     ],
-    [
+    "mood_keywords": [
       "키워드 1",
       "키워드 2",
       "키워드 3",
@@ -1257,7 +1257,7 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
     {{
       "question_id": 1,
       "question_text": "로고 심볼의 선은 어떤 두께와 무게감을 가져야 합니까?",
-      [
+      "options": [
         "1. 얇고 섬세한 선으로 정교함을 강조",
         "2. 균일한 중간 두께로 안정감을 강조",
         "3. 굵고 힘 있는 선으로 존재감을 강조",
@@ -1267,7 +1267,7 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
     {{
       "question_id": 2,
       "question_text": "심볼의 조형 원리에서 가장 우선시되는 형태는 무엇입니까?",
-      [
+      "options": [
         "1. 절제된 기하학적 도형",
         "2. 유기적이고 부드러운 곡선",
         "3. 정적인 수평/수직 구조",
@@ -1277,7 +1277,7 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
     {{
       "question_id": 3,
       "question_text": "브랜드 캐릭터가 전달해야 할 핵심 감정적 인상은 무엇입니까?",
-      [
+      "options": [
         "1. 고요하고 신뢰감 있는 인상",
         "2. 따뜻하고 친근한 인상",
         "3. 지적이고 세련된 인상",
