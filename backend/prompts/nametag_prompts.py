@@ -3,16 +3,11 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 
-SYSTEM_PROMPT = """당신은 10년 경력의 브랜드 디렉터입니다.
-초기 창업자에게 최소 브랜드(MVB: Minimum Viable Brand)를 제공하는 것이 목표입니다.
-반드시 JSON형식으로만 출력하고 마크다운 코드블록이나 설명 텍스트를 절대 포함하지 마세요.
-각 후보는 서로 완전히 다른 방향성과 감성을 가져야 합니다.
-
-[🚨 최고 수준의 엄격한 제약 사항 - 위반 시 시스템 오류 발생 🚨]
-1. 반드시 완벽한 JSON 형식으로만 출력하세요. 마크다운(```json)이나 부가 설명은 절대 금지합니다.
-2. 프롬프트에서 제시한 JSON의 '최상위 Key(예: brand_philosophy, naming_expansion, color_palette, character_guide 등)'를 절대 생략하거나 지우지 마세요.
-3. 데이터 구조를 평탄화(Flatten)하지 마세요. 반드시 요청한 중첩(Nested) 구조를 100% 그대로 유지해야 합니다.
-4. 요청한 항목 중 단 하나라도 빼먹거나 중간에 답변을 종료하지 마세요. 모든 항목의 값을 꽉 채워서 응답해야 합니다.
+SYSTEM_PROMPT = """당신은 초기 창업자의 MVB 구축을 돕는 브랜드 디렉터입니다.
+반드시 유효한 JSON만 출력하세요. 마크다운 코드블록, 부가 설명, 주석, 후행 쉼표는 금지합니다.
+요청된 최상위 키, 필드명, 자료형, 중첩 구조를 유지하고 필드를 누락하지 마세요.
+JSON은 사람이 읽기 쉽도록 2칸 들여쓰기와 줄바꿈을 사용하고, 배열의 각 항목은 별도 줄에 작성하세요.
+각 후보는 서로 구분되는 방향성과 감성을 가져야 합니다.
 """
 
 
@@ -73,8 +68,66 @@ def get_brand_gallery_prompt(brand_data: dict[str, Any]) -> str:
         "background": "배경"
       }}
     }},
-    {{ "name": "브랜드명 2", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }},
-    {{ "name": "브랜드명 3", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }}
+    {{
+      "name": "브랜드명 2",
+      "meaning": "...",
+      "story": "...",
+      "slogan": "...",
+      "typography": {{
+        "korean": "...",
+        "english": "...",
+        "reason": "..."
+      }},
+      "character": {{
+        "name": "...",
+        "concept": "...",
+        "personality": "...",
+        "visual": "..."
+      }},
+      "logo_design": {{
+        "brand_name": "...",
+        "brand_topic": "...",
+        "core_value": "...",
+        "target_mood": "...",
+        "symbol_type": "...",
+        "font_style": "...",
+        "font_reference": "...",
+        "font_weight": "...",
+        "brand_color": "...",
+        "logo_type": "...",
+        "background": "..."
+      }}
+    }},
+    {{
+      "name": "브랜드명 3",
+      "meaning": "...",
+      "story": "...",
+      "slogan": "...",
+      "typography": {{
+        "korean": "...",
+        "english": "...",
+        "reason": "..."
+      }},
+      "character": {{
+        "name": "...",
+        "concept": "...",
+        "personality": "...",
+        "visual": "..."
+      }},
+      "logo_design": {{
+        "brand_name": "...",
+        "brand_topic": "...",
+        "core_value": "...",
+        "target_mood": "...",
+        "symbol_type": "...",
+        "font_style": "...",
+        "font_reference": "...",
+        "font_weight": "...",
+        "brand_color": "...",
+        "logo_type": "...",
+        "background": "..."
+      }}
+    }}
   ]
 }}"""
 
@@ -95,9 +148,10 @@ def get_O_interview_prompt() -> str:
 - 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
 - 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
 - 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+- 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 {
-  "required_question_count": n,
+  "required_question_count": 5,
   "reasoning": "입력된 정보 중 어떤 부분이 모호하여, 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
   "questions": [
     {
@@ -110,8 +164,8 @@ def get_O_interview_prompt() -> str:
         "4. 선택지 D"
       ]
     }
-      ]
-    }"""
+  ]
+}"""
 
 
 def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
@@ -138,7 +192,13 @@ def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: d
 - 각 이름에 대해 짧은 1문장(20자 이내) 이유를 병기하되, 출력 형식은 단순한 문자열 후보 배열로 유지하세요.
 
 반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["이름1", "이름2", "이름3"] }}
+{{
+  "candidates": [
+    "이름1",
+    "이름2",
+    "이름3"
+  ]
+}}
 """
 
     if target == "name_meaning":
@@ -150,7 +210,13 @@ def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: d
 목표: 현재 선택된 브랜드명에 대해 서로 다른 해석/의미 설명 3가지를 생성하세요. 각 항목은 1문장(50자 이내)으로 간결하게 작성하세요.
 
 반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["의미1", "의미2", "의미3"] }}
+{{
+  "candidates": [
+    "의미1",
+    "의미2",
+    "의미3"
+  ]
+}}
 """
 
     if target == "slogan":
@@ -162,7 +228,13 @@ def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: d
 목표: 핵심 슬로건 3개를 생성하세요. 각 슬로건은 한국어 기준 15자 이내여야 합니다.
 
 반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["슬로건1", "슬로건2", "슬로건3"] }}
+{{
+  "candidates": [
+    "슬로건1",
+    "슬로건2",
+    "슬로건3"
+  ]
+}}
 """
 
     if target == "story_summary":
@@ -174,7 +246,13 @@ def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: d
 목표: 브랜드 탄생 서사 요약(스토리) 3가지 변주를 생성하세요. 각 항목은 최대 100자 이내로 작성하세요.
 
 반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["스토리1", "스토리2", "스토리3"] }}
+{{
+  "candidates": [
+    "스토리1",
+    "스토리2",
+    "스토리3"
+  ]
+}}
 """
 
     # fallback: generic short alternatives
@@ -186,7 +264,13 @@ def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: d
 목표: 필드 `{target}`에 대한 짧은 대체 후보 3개를 생성하세요.
 
 반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["옵션1", "옵션2", "옵션3"] }}
+{{
+  "candidates": [
+    "옵션1",
+    "옵션2",
+    "옵션3"
+  ]
+}}
 """
 
 
@@ -208,9 +292,36 @@ def get_O_mvb_prompt(interview_text: str) -> str:
       "seed_color": "#XXXXXX",
       "seed_color_reason": "이 컬러를 선택한 이유 (30자 이내)"
     }},
-    {{ "id": 2, "brand_name": "...", "brand_name_en": "...", "name_meaning": "...", "slogan": "...", "story_summary": "...", "seed_color": "...", "seed_color_reason": "..." }},
-    {{ "id": 3, "brand_name": "...", "brand_name_en": "...", "name_meaning": "...", "slogan": "...", "story_summary": "...", "seed_color": "...", "seed_color_reason": "..." }},
-    {{ "id": 4, "brand_name": "...", "brand_name_en": "...", "name_meaning": "...", "slogan": "...", "story_summary": "...", "seed_color": "...", "seed_color_reason": "..." }}
+    {{
+      "id": 2,
+      "brand_name": "...",
+      "brand_name_en": "...",
+      "name_meaning": "...",
+      "slogan": "...",
+      "story_summary": "...",
+      "seed_color": "...",
+      "seed_color_reason": "..."
+    }},
+    {{
+      "id": 3,
+      "brand_name": "...",
+      "brand_name_en": "...",
+      "name_meaning": "...",
+      "slogan": "...",
+      "story_summary": "...",
+      "seed_color": "...",
+      "seed_color_reason": "..."
+    }},
+    {{
+      "id": 4,
+      "brand_name": "...",
+      "brand_name_en": "...",
+      "name_meaning": "...",
+      "slogan": "...",
+      "story_summary": "...",
+      "seed_color": "...",
+      "seed_color_reason": "..."
+    }}
   ]
 }}"""
 
@@ -227,15 +338,21 @@ def get_A_interview_prompt(brand_info: dict[str, Any]) -> str:
 - 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
 - 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
 - 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+- 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 {{
-  "required_question_count": n,
+  "required_question_count": 5,
   "reasoning": "선택된 브랜드 조합은 어떤 감성/장점이 뚜렷하지만, 실제 구현 단계에서 어떤 부분이 모호하여 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "질문 내용",
-      "options": ["1. 선택지 A", "2. 선택지 B", "3. 선택지 C", "4. 선택지 D"]
+      "options": [
+        "1. 선택지 A",
+        "2. 선택지 B",
+        "3. 선택지 C",
+        "4. 선택지 D"
+      ]
     }}
   ]
 }}"""
@@ -260,8 +377,16 @@ def get_A1_philosophy_prompt(brand_info: dict[str, Any], deepdive_answers_text: 
   "brand_philosophy": {{
     "manifesto": "철학 선언문 (1~2문단)",
     "raison_detre": "브랜드 존재 이유 (1문장)",
-    "stand_against": ["반대하는 것 1", "반대하는 것 2", "반대하는 것 3"],
-    "stand_for": ["지지하고 실천하는 가치 1", "지지하고 실천하는 가치 2", "지지하고 실천하는 가치 3"]
+    "stand_against": [
+      "반대하는 것 1",
+      "반대하는 것 2",
+      "반대하는 것 3"
+    ],
+    "stand_for": [
+      "지지하고 실천하는 가치 1",
+      "지지하고 실천하는 가치 2",
+      "지지하고 실천하는 가치 3"
+    ]
   }},
   "brand_essence": {{
     "keyword": "에센스 키워드 (1~3단어)",
@@ -272,9 +397,21 @@ def get_A1_philosophy_prompt(brand_info: dict[str, Any], deepdive_answers_text: 
     "mission": "브랜드 미션 (동사형)",
     "vision": "브랜드 비전 (명사형)",
     "core_values": [
-      {{ "value": "핵심 가치 1", "description": "설명", "example": "예시" }},
-      {{ "value": "핵심 가치 2", "description": "설명", "example": "예시" }},
-      {{ "value": "핵심 가치 3", "description": "설명", "example": "예시" }}
+      {{
+        "value": "핵심 가치 1",
+        "description": "설명",
+        "example": "예시"
+      }},
+      {{
+        "value": "핵심 가치 2",
+        "description": "설명",
+        "example": "예시"
+      }},
+      {{
+        "value": "핵심 가치 3",
+        "description": "설명",
+        "example": "예시"
+      }}
     ]
   }}
 }}"""
@@ -298,19 +435,44 @@ def get_A2_story_prompt(brand_info: dict[str, Any], deepdive_answers_text: str =
 {{
   "naming_expansion": {{
     "name_story": "탄생 스토리 (100자 이상)",
-    "domain_suggestions": ["추천도메인1.com", "추천도메인2.co.kr", "추천도메인3.co.kr"],
-    "sns_handles": ["@추천핸들1", "@추천핸들2", "@추천핸들3"],
+    "domain_suggestions": [
+      "추천도메인1.com",
+      "추천도메인2.co.kr",
+      "추천도메인3.co.kr"
+    ],
+    "sns_handles": [
+      "@추천핸들1",
+      "@추천핸들2",
+      "@추천핸들3"
+    ],
     "alternative_names": [
-      {{ "name": "대안명1", "name_en": "Alt1", "rationale": "상표권 대안으로 추천하는 이유" }},
-      {{ "name": "대안명2", "name_en": "Alt2", "rationale": "상표권 대안으로 추천하는 이유" }}
+      {{
+        "name": "대안명1",
+        "name_en": "Alt1",
+        "rationale": "상표권 대안으로 추천하는 이유"
+      }},
+      {{
+        "name": "대안명2",
+        "name_en": "Alt2",
+        "rationale": "상표권 대안으로 추천하는 이유"
+      }}
     ]
   }},
   "slogan_expansion": {{
     "main_slogan_en": "영문 메인 슬로건",
     "sub_slogans": [
-      {{ "slogan": "서브 슬로건 1", "emphasis": "사용 상황" }},
-      {{ "slogan": "서브 슬로건 2", "emphasis": "사용 상황" }},
-      {{ "slogan": "서브 슬로건 3", "emphasis": "사용 상황" }}
+      {{
+        "slogan": "서브 슬로건 1",
+        "emphasis": "사용 상황"
+      }},
+      {{
+        "slogan": "서브 슬로건 2",
+        "emphasis": "사용 상황"
+      }},
+      {{
+        "slogan": "서브 슬로건 3",
+        "emphasis": "사용 상황"
+      }}
     ]
   }},
   "brand_story_full": "브랜드 스토리 전문 (반드시 500자 이상, 3~5문단)"
@@ -336,9 +498,18 @@ def get_A3_positioning_prompt(brand_info: dict[str, Any], deepdive_answers_text:
   "positioning": {{
     "statement": "For [타겟], [{brand_info['brand_name']}]은(는) [기존 업계의 뻔한 대안/관행]와(과) 달리 [차별화 혜택]을(를) 제공합니다.",
     "differentiators": [
-      {{ "point": "차별화 셀링 포인트 1 제목", "description": "구체적인 차별점 설명 (상세페이지용)" }},
-      {{ "point": "차별화 셀링 포인트 2 제목", "description": "구체적인 차별점 설명 (상세페이지용)" }},
-      {{ "point": "차별화 셀링 포인트 3 제목", "description": "구체적인 차별점 설명 (상세페이지용)" }}
+      {{
+        "point": "차별화 셀링 포인트 1 제목",
+        "description": "구체적인 차별점 설명 (상세페이지용)"
+      }},
+      {{
+        "point": "차별화 셀링 포인트 2 제목",
+        "description": "구체적인 차별점 설명 (상세페이지용)"
+      }},
+      {{
+        "point": "차별화 셀링 포인트 3 제목",
+        "description": "구체적인 차별점 설명 (상세페이지용)"
+      }}
     ],
     "positioning_map_visualized": {{
       "axis_x": "X축의 양 극단 설명",
@@ -350,9 +521,18 @@ def get_A3_positioning_prompt(brand_info: dict[str, Any], deepdive_answers_text:
   "unbreakable_brand_promise": {{
     "declaration": "우리는 당신에게 항상 [핵심 경험]을(를) 드립니다.",
     "proof_of_promise": [
-      {{ "channel": "마케팅 콘텐츠", "actionable_rule": "구체적인 실무 행동 지침" }},
-      {{ "channel": "패키징 및 언박싱", "actionable_rule": "구체적인 실무 행동 지침" }},
-      {{ "channel": "고객 응대 (CS)", "actionable_rule": "구체적인 실무 행동 지침" }}
+      {{
+        "channel": "마케팅 콘텐츠",
+        "actionable_rule": "구체적인 실무 행동 지침"
+      }},
+      {{
+        "channel": "패키징 및 언박싱",
+        "actionable_rule": "구체적인 실무 행동 지침"
+      }},
+      {{
+        "channel": "고객 응대 (CS)",
+        "actionable_rule": "구체적인 실무 행동 지침"
+      }}
     ]
   }}
 }}"""
@@ -409,17 +589,23 @@ def get_B_interview_prompt(brand_info: dict[str, Any]) -> str:
 - 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
 - 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
 - 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+- 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
 
 {{
-  "required_question_count": 1,
-  "reasoning": "다음 단계에서 입체적 페르소나 / 고객 여정 맵을 구체적으로 작성하기 위해, 현재 어떤 정보가 부족하므로 이를 파악할 질문 1개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "다음 단계에서 입체적 페르소나 / 고객 여정 맵을 구체적으로 작성하기 위해 필요한 정보를 파악하는 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "타겟 고객의 가장 중요한 라이프스타일/결핍은 무엇입니까?",
-      "options": ["1. ...", "2. ...", "3. ...", "4. ..."]
+      "options": [
+        "1. ...",
+        "2. ...",
+        "3. ...",
+        "4. ..."
+      ]
     }}
   ]
 }}"""
@@ -451,7 +637,13 @@ def get_B1_persona_prompt(brand_info: dict[str, Any], previous_context: str, dee
   "core_target_group": {{
     "definition": "마케팅 과녁이 될 핵심 타겟 1줄 정의",
     "demographics": "광고 세팅용 인구통계 (연령, 성별, 직업, 가구형태)",
-    "lifestyle_keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
+    "lifestyle_keywords": [
+      "키워드1",
+      "키워드2",
+      "키워드3",
+      "키워드4",
+      "키워드5"
+    ],
     "consumption_behavior": "소비 행태 요약 (돈을 아끼는 곳 vs 기꺼이 쓰는 곳)"
   }},
   "primary_persona": {{
@@ -459,7 +651,11 @@ def get_B1_persona_prompt(brand_info: dict[str, Any], previous_context: str, dee
     "age_and_job": "나이 및 구체적인 직업",
     "daily_scene": "마케팅 타이밍을 잡기 위한 결정적 씬 묘사",
     "pain_point_and_desire": "현재 겪고 있는 결핍과 우리 브랜드를 통한 해결 욕구",
-    "emotional_needs": ["정서적 니즈 1", "정서적 니즈 2", "정서적 니즈 3"],
+    "emotional_needs": [
+      "정서적 니즈 1",
+      "정서적 니즈 2",
+      "정서적 니즈 3"
+    ],
     "deal_breaker": "헛발질을 막아주는 취향의 마지노선"
   }},
   "secondary_personas": [
@@ -469,14 +665,38 @@ def get_B1_persona_prompt(brand_info: dict[str, Any], previous_context: str, dee
       "character_type": "타겟 유형",
       "why_they_buy": "구매하는 특수 상황/동기"
     }},
-    {{ "id": 2, "name_and_demographic": "...", "character_type": "...", "why_they_buy": "..." }},
-    {{ "id": 3, "name_and_demographic": "...", "character_type": "...", "why_they_buy": "..." }},
-    {{ "id": 4, "name_and_demographic": "...", "character_type": "...", "why_they_buy": "..." }}
+    {{
+      "id": 2,
+      "name_and_demographic": "...",
+      "character_type": "...",
+      "why_they_buy": "..."
+    }},
+    {{
+      "id": 3,
+      "name_and_demographic": "...",
+      "character_type": "...",
+      "why_they_buy": "..."
+    }},
+    {{
+      "id": 4,
+      "name_and_demographic": "...",
+      "character_type": "...",
+      "why_they_buy": "..."
+    }}
   ],
   "emotional_triggers": [
-    {{ "trigger": "감정 트리거 1", "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유" }},
-    {{ "trigger": "감정 트리거 2", "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유" }},
-    {{ "trigger": "감정 트리거 3", "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유" }}
+    {{
+      "trigger": "감정 트리거 1",
+      "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유"
+    }},
+    {{
+      "trigger": "감정 트리거 2",
+      "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유"
+    }},
+    {{
+      "trigger": "감정 트리거 3",
+      "reason": "상세페이지 카피라이팅 소스가 될 구체적 이유"
+    }}
   ]
 }}"""
 
@@ -549,17 +769,23 @@ def get_C_interview_prompt(brand_info: dict[str, Any]) -> str:
 - 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
 - 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
 - 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+- 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
 
 {{
-  "required_question_count": 1,
-  "reasoning": "비주얼 아이덴티티를 구체화하기 위해 필요한 핵심 질문 1개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "비주얼 아이덴티티를 구체화하기 위해 필요한 핵심 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "브랜드의 시각 무드를 가장 잘 설명하는 방향은 무엇입니까?",
-      "options": ["1. 정갈하고 고급스러운 방향", "2. 따뜻하고 친근한 방향", "3. 자연스럽고 지속가능한 방향", "4. 실험적이고 감각적인 방향"]
+      "options": [
+        "1. 정갈하고 고급스러운 방향",
+        "2. 따뜻하고 친근한 방향",
+        "3. 자연스럽고 지속가능한 방향",
+        "4. 실험적이고 감각적인 방향"
+      ]
     }}
   ]
 }}"""
@@ -578,11 +804,36 @@ def get_C1_color_prompt(brand_info: dict[str, Any], deepdive_answers_text: str =
 
 {{
   "color_palette": [
-    {{ "color_name": "주조색명", "hex_code": "#XXXXXX", "role": "Primary", "reason": "선정 이유" }},
-    {{ "color_name": "보조색명", "hex_code": "#XXXXXX", "role": "Secondary", "reason": "선정 이유" }},
-    {{ "color_name": "강조색명", "hex_code": "#XXXXXX", "role": "Accent", "reason": "선정 이유" }},
-    {{ "color_name": "배경색명", "hex_code": "#XXXXXX", "role": "Background", "reason": "선정 이유" }},
-    {{ "color_name": "텍스트색명", "hex_code": "#XXXXXX", "role": "Text Color", "reason": "선정 이유" }}
+    {{
+      "color_name": "주조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Primary",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "보조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Secondary",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "강조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Accent",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "배경색명",
+      "hex_code": "#XXXXXX",
+      "role": "Background",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "텍스트색명",
+      "hex_code": "#XXXXXX",
+      "role": "Text Color",
+      "reason": "선정 이유"
+    }}
   ]
 }}"""
 
@@ -629,9 +880,23 @@ def get_C3_visual_mood_prompt(brand_info: dict[str, Any], deepdive_answers_text:
 
 {{
   "visual_mood_guide": {{
-    "photography_do": ["권장 표현 1", "권장 표현 2", "권장 표현 3"],
-    "photography_dont": ["금지 표현 1", "금지 표현 2", "금지 표현 3"],
-    "mood_keywords": ["키워드 1", "키워드 2", "키워드 3", "키워드 4", "키워드 5"]
+    "photography_do": [
+      "권장 표현 1",
+      "권장 표현 2",
+      "권장 표현 3"
+    ],
+    "photography_dont": [
+      "금지 표현 1",
+      "금지 표현 2",
+      "금지 표현 3"
+    ],
+    "mood_keywords": [
+      "키워드 1",
+      "키워드 2",
+      "키워드 3",
+      "키워드 4",
+      "키워드 5"
+    ]
   }},
   "design_principles": {{
     "layout_direction": "레이아웃 방향성 설명",
@@ -886,11 +1151,36 @@ def get_C1_visual_identity_prompt(
 
 {{
   "color_palette": [
-    {{ "color_name": "주조색명", "hex_code": "#XXXXXX", "role": "Primary", "reason": "선정 이유" }},
-    {{ "color_name": "보조색명", "hex_code": "#XXXXXX", "role": "Secondary", "reason": "선정 이유" }},
-    {{ "color_name": "강조색명", "hex_code": "#XXXXXX", "role": "Accent", "reason": "선정 이유" }},
-    {{ "color_name": "배경색명", "hex_code": "#XXXXXX", "role": "Background", "reason": "선정 이유" }},
-    {{ "color_name": "텍스트색명", "hex_code": "#XXXXXX", "role": "Text Color", "reason": "선정 이유" }}
+    {{
+      "color_name": "주조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Primary",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "보조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Secondary",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "강조색명",
+      "hex_code": "#XXXXXX",
+      "role": "Accent",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "배경색명",
+      "hex_code": "#XXXXXX",
+      "role": "Background",
+      "reason": "선정 이유"
+    }},
+    {{
+      "color_name": "텍스트색명",
+      "hex_code": "#XXXXXX",
+      "role": "Text Color",
+      "reason": "선정 이유"
+    }}
   ],
   "typography": {{
     "primary_font": {{
@@ -907,9 +1197,23 @@ def get_C1_visual_identity_prompt(
     }}
   }},
   "visual_mood_guide": {{
-    "photography_do": ["권장 표현 1", "권장 표현 2", "권장 표현 3"],
-    "photography_dont": ["금지 표현 1", "금지 표현 2", "금지 표현 3"],
-    "mood_keywords": ["키워드 1", "키워드 2", "키워드 3", "키워드 4", "키워드 5"]
+    "photography_do": [
+      "권장 표현 1",
+      "권장 표현 2",
+      "권장 표현 3"
+    ],
+    "photography_dont": [
+      "금지 표현 1",
+      "금지 표현 2",
+      "금지 표현 3"
+    ],
+    "mood_keywords": [
+      "키워드 1",
+      "키워드 2",
+      "키워드 3",
+      "키워드 4",
+      "키워드 5"
+    ]
   }},
   "design_principles": {{
     "layout_direction": "레이아웃 방향성 설명",
@@ -937,6 +1241,7 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
 - 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
 - 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
 - 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+- 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 [확정된 최종 브랜드 조합]
 {brand_info}
@@ -946,23 +1251,38 @@ C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되�
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
 {{
-  "required_question_count": 3,
-  "reasoning": "로고 심볼의 선 두께와 조형 원리, 캐릭터의 성격을 구체화하기 위해 핵심 질문 3개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "로고 심볼의 선 두께와 조형 원리, 캐릭터의 성격을 구체화하기 위해 핵심 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "로고 심볼의 선은 어떤 두께와 무게감을 가져야 합니까?",
-      "options": ["1. 얇고 섬세한 선으로 정교함을 강조", "2. 균일한 중간 두께로 안정감을 강조", "3. 굵고 힘 있는 선으로 존재감을 강조", "4. 선 대신 solid shape 위주의 면 구성"]
+      "options": [
+        "1. 얇고 섬세한 선으로 정교함을 강조",
+        "2. 균일한 중간 두께로 안정감을 강조",
+        "3. 굵고 힘 있는 선으로 존재감을 강조",
+        "4. 선 대신 solid shape 위주의 면 구성"
+      ]
     }},
     {{
       "question_id": 2,
       "question_text": "심볼의 조형 원리에서 가장 우선시되는 형태는 무엇입니까?",
-      "options": ["1. 절제된 기하학적 도형", "2. 유기적이고 부드러운 곡선", "3. 정적인 수평/수직 구조", "4. 리듬감 있는 반복 패턴"]
+      "options": [
+        "1. 절제된 기하학적 도형",
+        "2. 유기적이고 부드러운 곡선",
+        "3. 정적인 수평/수직 구조",
+        "4. 리듬감 있는 반복 패턴"
+      ]
     }},
     {{
       "question_id": 3,
       "question_text": "브랜드 캐릭터가 전달해야 할 핵심 감정적 인상은 무엇입니까?",
-      "options": ["1. 고요하고 신뢰감 있는 인상", "2. 따뜻하고 친근한 인상", "3. 지적이고 세련된 인상", "4. 신비롭고 몽환적인 인상"]
+      "options": [
+        "1. 고요하고 신뢰감 있는 인상",
+        "2. 따뜻하고 친근한 인상",
+        "3. 지적이고 세련된 인상",
+        "4. 신비롭고 몽환적인 인상"
+      ]
     }}
   ]
 }}"""
