@@ -164,8 +164,9 @@ def get_O_interview_prompt() -> str:
         "4. 선택지 D"
       ]
     }
-      ]
-    }"""
+    }
+  ]
+}"""
 
 
 def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
