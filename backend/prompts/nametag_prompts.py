@@ -151,7 +151,7 @@ def get_O_interview_prompt() -> str:
 - 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 {
-  "required_question_count": n,
+  "required_question_count": 5,
   "reasoning": "입력된 정보 중 어떤 부분이 모호하여, 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
   "questions": [
     {
@@ -341,7 +341,7 @@ def get_A_interview_prompt(brand_info: dict[str, Any]) -> str:
 - 아래 JSON의 questions 배열은 항목 구조 예시입니다. 실제 응답에는 총 5~10개의 서로 다른 질문 객체를 포함하고, required_question_count에는 실제 질문 개수를 기록하세요.
 
 {{
-  "required_question_count": n,
+  "required_question_count": 5,
   "reasoning": "선택된 브랜드 조합은 어떤 감성/장점이 뚜렷하지만, 실제 구현 단계에서 어떤 부분이 모호하여 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
   "questions": [
     {{
