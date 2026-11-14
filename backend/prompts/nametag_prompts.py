@@ -164,7 +164,6 @@ def get_O_interview_prompt() -> str:
         "4. 선택지 D"
       ]
     }
-    }
   ]
 }"""
 
