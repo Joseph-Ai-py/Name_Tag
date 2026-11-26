@@ -149,7 +149,7 @@ export function RightSidebar() {
                 onClick={() => toggleSection("dataA")}
                 className="flex w-full items-center justify-between bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-900 hover:bg-stone-100"
               >
-                <span>Section A - 철학/스토리</span>
+                <span>브랜드 본질과 스토리</span>
                 <ChevronDown
                   size={16}
                   className={`transition ${
@@ -180,7 +180,7 @@ export function RightSidebar() {
                 onClick={() => toggleSection("dataB")}
                 className="flex w-full items-center justify-between bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-900 hover:bg-stone-100"
               >
-                <span>Section B - 타겟/여정</span>
+                <span>고객 전략과 여정</span>
                 <ChevronDown
                   size={16}
                   className={`transition ${
@@ -211,7 +211,7 @@ export function RightSidebar() {
                 onClick={() => toggleSection("dataC")}
                 className="flex w-full items-center justify-between bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-900 hover:bg-stone-100"
               >
-                <span>Section C - 비주얼</span>
+                <span>시각 정체성</span>
                 <ChevronDown
                   size={16}
                   className={`transition ${
@@ -242,7 +242,7 @@ export function RightSidebar() {
                 onClick={() => toggleSection("dataDE")}
                 className="flex w-full items-center justify-between bg-stone-50 px-4 py-3 text-sm font-semibold text-stone-900 hover:bg-stone-100"
               >
-                <span>Section DE - 로고/캐릭터</span>
+                <span>로고와 캐릭터</span>
                 <ChevronDown
                   size={16}
                   className={`transition ${

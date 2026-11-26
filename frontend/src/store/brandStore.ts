@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ReportV2Page } from "../api/client";
 
 export type BrandData = {
   business_type: string;
@@ -17,6 +18,26 @@ export type BrandInfo = {
   seed_color_reason: string;
 };
 
+export type ReportV2Workspace = {
+  brand: { brand_name: string; business_type: string; target: string; vibes: string; keywords: string };
+  selectedBrandInfo: BrandInfo | null;
+  brandCandidates: Array<BrandInfo & { id: number }>;
+  pages: Record<string, ReportV2Page>;
+  interviews: Record<string, { required_question_count: number; reasoning: string; questions: Array<{ question_id: number; question_text: string; options: string[] }> }>;
+  answers: Record<string, Array<{ question_id: number; question_text: string; selected_option: string; user_input: string }>>;
+  conditional: Record<string, boolean>;
+};
+
+const emptyReportV2Workspace: ReportV2Workspace = {
+  brand: { brand_name: "", business_type: "", target: "", vibes: "", keywords: "" },
+  selectedBrandInfo: null,
+  brandCandidates: [],
+  pages: {},
+  interviews: {},
+  answers: {},
+  conditional: { "17": false, "21": false },
+};
+
 export type BrandStore = {
   brandData: BrandData | null;
   interviewDataO: string;
@@ -30,6 +51,7 @@ export type BrandStore = {
   interviewDataDE: string;
   dataDE: Record<string, any> | null;
   currentStep: 0 | 1 | 2 | 3 | 4 | 5;
+  reportV2: ReportV2Workspace;
   isLoading: boolean;
   error: string | null;
   setBrandData: (brandData: BrandData) => void;
@@ -44,6 +66,8 @@ export type BrandStore = {
   setInterviewDataDE: (value: string) => void;
   setDataDE: (value: Record<string, any>) => void;
   setCurrentStep: (value: 0 | 1 | 2 | 3 | 4 | 5) => void;
+  updateReportV2: (updater: (current: ReportV2Workspace) => ReportV2Workspace) => void;
+  resetReportV2: () => void;
   setIsLoading: (value: boolean) => void;
   setError: (value: string | null) => void;
   reset: () => void;
@@ -71,8 +95,10 @@ const initialState = {
   interviewDataDE: "",
   dataDE: null,
   currentStep: 0 as 0 | 1 | 2 | 3 | 4 | 5,
+  reportV2: emptyReportV2Workspace,
   isLoading: false,
   error: null,
+  interviewSnapshots: {},
   appliedSelections: {},
 };
 
@@ -90,24 +116,15 @@ export const useBrandStore = create<BrandStore>((set, get) => ({
   setInterviewDataDE: (value) => set({ interviewDataDE: value }),
   setDataDE: (value) => set({ dataDE: value }),
   setCurrentStep: (value) => set({ currentStep: value }),
+  updateReportV2: (updater) => set((state) => ({ reportV2: updater(state.reportV2) })),
+  resetReportV2: () => set({ reportV2: emptyReportV2Workspace }),
   setIsLoading: (value) => set({ isLoading: value }),
   setError: (value) => set({ error: value }),
-  reset: () => set({ ...initialState }),
-  interviewSnapshots: (typeof window !== "undefined" && localStorage.getItem("nametag_interviewSnapshots"))
-    ? JSON.parse(localStorage.getItem("nametag_interviewSnapshots") || "{}")
-    : {},
-  appliedSelections: (typeof window !== "undefined" && localStorage.getItem("nametag_appliedSelections"))
-    ? JSON.parse(localStorage.getItem("nametag_appliedSelections") || "{}")
-    : {},
+  reset: () => set({ ...initialState, currentStep: 0 }),
   setAppliedSelection: (section, field, value) =>
     set((state) => {
       const copy = { ...(state.appliedSelections || {}) };
       copy[section] = { ...(copy[section] || {}), [field]: value };
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("nametag_appliedSelections", JSON.stringify(copy));
-        }
-      } catch (e) {}
       return { appliedSelections: copy };
     }),
   getAppliedSelection: (section, field) => {
@@ -121,22 +138,12 @@ export const useBrandStore = create<BrandStore>((set, get) => ({
     } else {
       Object.keys(copy).forEach((k) => delete copy[k]);
     }
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("nametag_appliedSelections", JSON.stringify(copy));
-      }
-    } catch (e) {}
     return { appliedSelections: copy };
   }),
   saveInterviewSnapshot: (section, snapshot) =>
     set((state) => {
       const copy = { ...(state.interviewSnapshots || {}) };
       copy[section] = { ...(copy[section] || {}), ...snapshot };
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("nametag_interviewSnapshots", JSON.stringify(copy));
-        }
-      } catch (e) {}
       return { interviewSnapshots: copy };
     }),
   getInterviewSnapshot: (section) => {

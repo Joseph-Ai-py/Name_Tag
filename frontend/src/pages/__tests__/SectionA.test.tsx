@@ -1,58 +1,57 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { SectionA } from '../SectionA';
-import { useBrandStore } from '../../store/brandStore';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
-vi.mock('../../api/client', () => ({
-  regenerateSectionAField: vi.fn(),
-  generateSectionA: vi.fn(),
-  getAInterview: vi.fn(),
-  apiLogger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
+const api = vi.hoisted(() => ({
+  getReportV2Meta: vi.fn(),
+  getReportV2Plan: vi.fn(),
+  generateReportV2Interview: vi.fn(),
+  generateReportV2Page: vi.fn(),
+  downloadReportV2Pdf: vi.fn(),
 }));
+vi.mock("../../api/client", () => api);
 
-import * as api from '../../api/client';
+import { ReportV2Studio } from "../ReportV2Studio";
+import { useBrandStore } from "../../store/brandStore";
 
-describe('SectionA selection persistence', () => {
+describe("NAME TAG V2 page generation", () => {
   beforeEach(() => {
-    // reset store
-    const store = useBrandStore.getState();
-    store.reset();
-    // provide brandInfo and dataA so buttons render
-    store.setBrandInfo({
-      brand_name: 'Test',
-      brand_name_en: 'TestEN',
-      name_meaning: 'Meaning',
-      slogan: 'Slogan',
-      story_summary: 'Story',
-      seed_color: '#000',
-      seed_color_reason: 'reason',
+    localStorage.clear();
+    useBrandStore.getState().reset();
+    api.getReportV2Meta.mockResolvedValue({ page_order: ["00"], page_specs: { "00": { title: "Cover", deps: [] } }, interviews: {} });
+    api.getReportV2Plan.mockResolvedValue({ ready_page_ids: ["00"], ready_interview_ids: [] });
+    api.generateReportV2Page.mockResolvedValue({
+      page: { page_id: "00", title: "Cover", status: "insufficient_data", data: { brand_name: "추가 정보 필요" }, confidence: "low" },
+      invalidated_page_ids: [],
     });
-    store.setDataA({ brand_name: 'Test', name_meaning: 'Meaning', slogan: 'Slogan', story_summary: 'Story' });
-    // clear applied selections
-    store.clearAppliedSelections('A');
-    // ensure mock cleared
-    (api.regenerateSectionAField as any).mockClear();
   });
 
-  it('shows saved selection and does not call API when applied selection exists', async () => {
-    const store = useBrandStore.getState();
-    store.setAppliedSelection('A', 'brand_name', 'SAVED_NAME');
+  it("generates a ready page and stores its V2 response", async () => {
+    render(<ReportV2Studio />);
+    fireEvent.click(await screen.findByRole("button", { name: /다음 추천: 00 Cover/ }));
 
-    render(<SectionA />);
+    expect(await screen.findByText("00 · Cover")).toBeTruthy();
+    expect(api.generateReportV2Page).toHaveBeenCalledWith("00", expect.objectContaining({ regenerate: false }));
+    expect(useBrandStore.getState().reportV2.pages["00"].page_id).toBe("00");
+    expect(localStorage.getItem("nametag_report_v2")).toBeNull();
+  });
 
-    // click 재생성 (브랜드명) button
-    const regenBtn = screen.getByText(/재생성 \(브랜드명\)/);
-    fireEvent.click(regenBtn);
+  it("keeps report data while the user edits a brand draft, then explains and applies the reset", async () => {
+    useBrandStore.getState().updateReportV2((previous) => ({
+      ...previous,
+      brand: { ...previous.brand, brand_name: "기존 이름" },
+      pages: { "00": { page_id: "00", title: "Cover", status: "complete", data: {}, confidence: "high" } },
+      answers: { brand: [{ question_id: 1, question_text: "Q", selected_option: "A", user_input: "" }] },
+    }));
+    render(<ReportV2Studio />);
+    fireEvent.change(screen.getAllByLabelText("브랜드명")[0], { target: { value: "새 이름" } });
 
-    // modal should show saved selection text
-    await waitFor(() => expect(screen.getByText('SAVED_NAME')).toBeTruthy());
+    expect(useBrandStore.getState().reportV2.pages["00"]).toBeTruthy();
+    expect(useBrandStore.getState().reportV2.brand.brand_name).toBe("기존 이름");
+    expect(await screen.findByText(/기존 보고서 페이지와 인터뷰 답변이 초기화/)).toBeTruthy();
 
-    // API should not have been called
-    expect(api.regenerateSectionAField).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByRole("button", { name: "변경 적용 후 다시 시작" })[0]);
+    expect(useBrandStore.getState().reportV2.brand.brand_name).toBe("새 이름");
+    expect(useBrandStore.getState().reportV2.pages).toEqual({});
+    expect(useBrandStore.getState().reportV2.answers).toEqual({});
   });
 });

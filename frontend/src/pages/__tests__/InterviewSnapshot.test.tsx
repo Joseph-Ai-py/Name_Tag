@@ -1,40 +1,56 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, fireEvent, screen } from "@testing-library/react";
-import { InterviewCard } from "../..//components/InterviewCard";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-const questions = [
-  { question_text: "Q1", options: ["1. A", "2. B"] },
-  { question_text: "Q2", options: ["1. X", "2. Y"] },
-];
+const api = vi.hoisted(() => ({
+  getReportV2Meta: vi.fn(),
+  getReportV2Plan: vi.fn(),
+  generateReportV2Interview: vi.fn(),
+  generateReportV2Page: vi.fn(),
+  downloadReportV2Pdf: vi.fn(),
+}));
+vi.mock("../../api/client", () => api);
 
-describe("InterviewCard snapshot user_inputs", () => {
+import { ReportV2Studio } from "../ReportV2Studio";
+import { useBrandStore } from "../../store/brandStore";
+
+const interview = {
+  required_question_count: 5,
+  reasoning: "필요한 브랜드 정보를 묻습니다.",
+  questions: Array.from({ length: 5 }, (_, index) => ({
+    question_id: index + 1,
+    question_text: `브랜드 질문 ${index + 1}`,
+    options: ["A 선택", "B 선택", "C 선택", "D 선택"],
+  })),
+};
+
+describe("NAME TAG V2 interview flow", () => {
   beforeEach(() => {
     localStorage.clear();
+    useBrandStore.getState().reset();
+    api.getReportV2Meta.mockResolvedValue({ page_order: ["00"], page_specs: { "00": { title: "Cover", deps: [] } }, interviews: { brand: { title: "Initial Brand Interview" } } });
+    api.getReportV2Plan.mockResolvedValue({ ready_page_ids: ["00"], ready_interview_ids: ["brand"] });
+    api.generateReportV2Interview.mockResolvedValue(interview);
   });
 
-  it("saves and restores user_inputs in snapshot", async () => {
-    const onComplete = vi.fn();
-    render(<InterviewCard questions={questions} reasoning={"r"} onComplete={onComplete} sectionKey={"TEST"} />);
+  it("generates a V2 interview with five questions and collects free text", async () => {
+    render(<ReportV2Studio />);
+    const generateButton = await screen.findByRole("button", { name: "질문 생성" });
+    await waitFor(() => expect(generateButton.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(generateButton);
 
-    // Click direct input
-    const directBtn = screen.getByText("직접 입력 (내 답변 입력)");
-    fireEvent.click(directBtn);
-    const textarea = screen.getByPlaceholderText("직접 입력할 답변을 작성하세요");
-    fireEvent.change(textarea, { target: { value: "my answer" } });
-    const saveBtn = screen.getByText("저장");
-    fireEvent.click(saveBtn);
+    expect(await screen.findByText(/브랜드 질문 1/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다음" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "직접 입력" }));
+    fireEvent.change(screen.getByPlaceholderText("직접 입력할 답변을 작성하세요"), { target: { value: "우리 브랜드의 방향" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    for (let index = 1; index < 5; index += 1) {
+      fireEvent.click(screen.getAllByRole("button", { name: "A 선택" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: index === 4 ? "인터뷰 완료" : "다음" }));
+    }
 
-    // Move next
-    const nextBtn = screen.getByText("다음");
-    fireEvent.click(nextBtn);
-
-    // Simulate remount by rendering anew
-    render(<InterviewCard questions={questions} reasoning={"r"} onComplete={onComplete} sectionKey={"TEST"} />);
-
-    // The current snapshot should restore answer
-    expect(localStorage.getItem("nametag_interviewSnapshots")).toBeTruthy();
-    const stored = JSON.parse(localStorage.getItem("nametag_interviewSnapshots") || "{}");
-    expect(stored.TEST.user_inputs).toBeTruthy();
-    expect(stored.TEST.user_inputs["0"]).toBe("my answer");
+    await waitFor(() => expect(useBrandStore.getState().reportV2.answers.brand).toHaveLength(5));
+    expect(useBrandStore.getState().reportV2.answers.brand[0].user_input).toBe("우리 브랜드의 방향");
+    expect(localStorage.getItem("nametag_report_v2")).toBeNull();
   });
 });

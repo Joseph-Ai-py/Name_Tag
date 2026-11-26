@@ -2,18 +2,27 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useBrandStore } from "../store/brandStore";
 
 type InterviewQuestion = {
+  question_id?: number;
   question_text: string;
   options: string[];
+};
+
+export type SubmittedInterviewAnswer = {
+  question_id: number;
+  question_text: string;
+  selected_option: string;
+  user_input: string;
 };
 
 type Props = {
   questions: InterviewQuestion[];
   reasoning: string;
   onComplete: (formattedText: string) => void;
+  onSubmitAnswers?: (answers: SubmittedInterviewAnswer[]) => void;
   sectionKey?: string;
 };
 
-export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: Props) {
+export function InterviewCard({ questions, reasoning, onComplete, onSubmitAnswers, sectionKey }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [userInputs, setUserInputs] = useState<Record<string, string>>({});
@@ -45,6 +54,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
   const currentQuestion = useMemo(() => {
     return questions[currentIndex] || questions[0];
   }, [questions, currentIndex]);
+  const hasCurrentAnswer = Boolean(answers[currentIndex]?.trim() || userInputs[String(currentIndex)]?.trim());
 
   const formattedQuestions = useMemo(
     () =>
@@ -64,17 +74,20 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
 
   return (
     <div className="space-y-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.06)] md:p-8">
-      <div className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        <p className="font-semibold">AI 분석</p>
+      <details className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <summary className="cursor-pointer font-semibold">질문 구성 이유 보기</summary>
         <p className="mt-2 whitespace-pre-line text-amber-950/80">{reasoning}</p>
-      </div>
+      </details>
 
       <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-stone-500">
             질문 {currentIndex + 1} / {questions.length}
           </p>
-          <p className="text-xs text-stone-400">4지선다 · 순차 응답</p>
+          <p className="text-xs text-stone-400">선택지 또는 직접 입력</p>
+        </div>
+        <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-stone-200" role="progressbar" aria-label="인터뷰 진행률" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={currentIndex + 1}>
+          <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
         </div>
         <h3 className="text-xl font-bold leading-snug text-stone-900 md:text-2xl">{currentQuestion.question_text}</h3>
       </div>
@@ -88,6 +101,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
             <div key={`${currentIndex}-${idx}`} className="flex items-stretch gap-2">
               <button
                 type="button"
+                aria-pressed={active}
                 onClick={() => {
                     const nextAnswers = [...answers];
                     nextAnswers[currentIndex] = stripped;
@@ -111,6 +125,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
           {!isEditing ? (
             <button
               type="button"
+              aria-pressed={isEditing}
               onClick={() => {
                 setIsEditing(true);
                 setEditingValue(answers[currentIndex] || "");
@@ -127,9 +142,10 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 className="w-full min-h-[96px] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none"
                 placeholder="직접 입력할 답변을 작성하세요"
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
+                  disabled={!editingValue.trim()}
                   onClick={() => {
                       const nextAnswers = [...answers];
                       nextAnswers[currentIndex] = editingValue.trim();
@@ -145,6 +161,7 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                 >
                   저장
                 </button>
+                <button type="button" className="rounded-full border border-stone-300 px-4 py-2 text-sm text-stone-700" onClick={() => { setIsEditing(false); setEditingValue(""); }}>취소</button>
               </div>
             </div>
           )}
@@ -154,19 +171,24 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
       <div className="mt-3 flex items-center justify-between">
         <button
           type="button"
+          disabled={currentIndex === 0}
           onClick={() => {
             if (currentIndex === 0) return;
             const prev = currentIndex - 1;
             setCurrentIndex(prev);
+            try {
+              sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: prev, user_inputs: userInputs });
+            } catch (e) {}
           }}
-          className="rounded-full border px-4 py-2 text-sm bg-white"
+          className="rounded-full border px-4 py-2 text-sm bg-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           뒤로
         </button>
         <button
           type="button"
+          disabled={!hasCurrentAnswer}
           onClick={() => {
-              if (!answers[currentIndex]) return;
+              if (!answers[currentIndex]?.trim() && !userInputs[String(currentIndex)]?.trim()) return;
               if (currentIndex < questions.length - 1) {
                 const next = currentIndex + 1;
                 setCurrentIndex(next);
@@ -174,15 +196,21 @@ export function InterviewCard({ questions, reasoning, onComplete, sectionKey }: 
                   sectionKey && saveInterviewSnapshot && saveInterviewSnapshot(sectionKey, { answers, currentIndex: next, user_inputs: userInputs });
                 } catch (e) {}
               } else {
-                // 💡 마지막 질문에서 완료 버튼 클릭 시 데이터 전달
+                onSubmitAnswers?.(questions.map((question, index) => ({
+                  question_id: question.question_id ?? index + 1,
+                  question_text: question.question_text,
+                  selected_option: answers[index] || "",
+                  user_input: userInputs[String(index)] || "",
+                })));
                 onComplete(formattedQuestions);
               }
           }}
-          className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white"
+          className="rounded-full bg-amber-500 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {currentIndex === questions.length - 1 ? "인터뷰 완료" : "다음"}
         </button>
       </div>
+      {!hasCurrentAnswer && <p className="text-right text-xs text-stone-500">선택지를 고르거나 직접 답변을 저장하면 다음 질문으로 이동할 수 있습니다.</p>}
     </div>
   );
 }

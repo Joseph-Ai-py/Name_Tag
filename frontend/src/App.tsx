@@ -16,6 +16,9 @@ const queryClient = new QueryClient({
 
 function App() {
   useEffect(() => {
+    for (const key of ["nametag_report_v2", "nametag_v2_current_step", "nametag_interviewSnapshots", "nametag_appliedSelections"]) {
+      localStorage.removeItem(key);
+    }
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const isDark = savedTheme ? savedTheme === "dark" : prefersDark;

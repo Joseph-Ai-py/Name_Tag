@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Iterable
 
@@ -13,6 +13,14 @@ SYSTEM_PROMPT = """당신은 10년 경력의 브랜드 디렉터입니다.
 2. 프롬프트에서 제시한 JSON의 '최상위 Key(예: brand_philosophy, naming_expansion, color_palette, character_guide 등)'를 절대 생략하거나 지우지 마세요.
 3. 데이터 구조를 평탄화(Flatten)하지 마세요. 반드시 요청한 중첩(Nested) 구조를 100% 그대로 유지해야 합니다.
 4. 요청한 항목 중 단 하나라도 빼먹거나 중간에 답변을 종료하지 마세요. 모든 항목의 값을 꽉 채워서 응답해야 합니다.
+"""
+
+INTERVIEW_RULES = """[인터뷰 공통 제약 사항]
+- 질문의 총 개수는 반드시 5개 이상, 10개 이하여야 합니다.
+- 모든 질문은 4지선다형 객관식이며, 질문마다 선택지는 정확히 4개여야 합니다.
+- question_id는 중복 없이 고유해야 합니다.
+- required_question_count 값은 questions 배열 길이와 정확히 같아야 합니다.
+- 마크다운이나 부가 설명 없이 오직 JSON 형식으로만 출력하세요.
 """
 
 
@@ -33,54 +41,13 @@ def _brand_context(brand_data: dict[str, Any], selected_brand_name: str = "브�
     )
 
 
-def get_brand_gallery_prompt(brand_data: dict[str, Any]) -> str:
-    return f"""{_brand_context(brand_data)}
+def get_O_interview_prompt(brand_data: dict[str, Any]) -> str:
+  return f"""창업자가 브랜드의 초기 아이디어를 입력했습니다.
 
-이 정보를 바탕으로 브랜드 초안 후보 3개를 생성하세요.
-각 후보는 서로 다른 톤과 사용 맥락을 가져야 합니다.
+{_brand_context(brand_data)}
 
-반드시 아래 JSON 형식으로만 응답하세요:
+입력값 중 비어 있거나 불명확한 항목은 절대 임의 추정하지 말고, 인터뷰 질문을 통해 확인하세요.
 
-{{
-  "brands": [
-    {{
-      "name": "브랜드명 1",
-      "meaning": "브랜드명 1의 의미와 어감",
-      "story": "브랜드명 1의 탄생/스토리",
-      "slogan": "핵심 슬로건 1",
-      "typography": {{
-        "korean": "추천 한글 폰트",
-        "english": "추천 영문 폰트",
-        "reason": "이 조합이 어울리는 이유"
-      }},
-      "character": {{
-        "name": "캐릭터 이름",
-        "concept": "캐릭터 컨셉",
-        "personality": "성격 3가지, 쉼표 구분",
-        "visual": "외형 묘사"
-      }},
-      "logo_design": {{
-        "brand_name": "브랜드명 1",
-        "brand_topic": "사업 주제",
-        "core_value": "핵심 가치",
-        "target_mood": "브랜드 감성",
-        "symbol_type": "심볼 스타일",
-        "font_style": "서체 스타일",
-        "font_reference": "서체 레퍼런스",
-        "font_weight": "서체 굵기",
-        "brand_color": "브랜드 컬러",
-        "logo_type": "로고 구성 방식",
-        "background": "배경"
-      }}
-    }},
-    {{ "name": "브랜드명 2", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }},
-    {{ "name": "브랜드명 3", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }}
-  ]
-}}"""
-
-
-def get_O_interview_prompt() -> str:
-    return """창업자가 브랜드의 초기 아이디어를 입력했습니다.
 당신의 다음 임무는 이 답변들을 바탕으로, 서로 완전히 다른 4개의 [브랜드 초안 후보(MVB)]를 생성하는 것입니다.
 
 [최종적으로 당신이 다음 단계에서 생성해야 할 4가지 초안 항목]
@@ -91,103 +58,66 @@ def get_O_interview_prompt() -> str:
 
 위의 4가지 항목을 매력적이고 구체적으로 도출하기 위해, 현재 창업자의 입력값에서 가장 비어있는 구체적인 디테일을 파악하여 물어볼 핵심 질문 n개를 생성하세요.
 
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+{INTERVIEW_RULES}
 
-{
-  "required_question_count": n,
-  "reasoning": "입력된 정보 중 어떤 부분이 모호하여, 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
+아래 JSON 형식으로 응답하세요:
+
+{{
+  "required_question_count": 5,
+  "reasoning": "입력된 정보 중 모호한 항목을 구체화하기 위해 브랜드명 후보, 타겟 상황, 차별 메시지, 톤앤매너, 컬러 방향을 확인하는 질문 5개를 생성했습니다.",
   "questions": [
-    {
+    {{
       "question_id": 1,
-      "question_text": "질문 내용",
+      "question_text": "브랜드명이 전달해야 할 첫 인상은 무엇이어야 하나요?",
       "options": [
-        "1. 선택지 A",
-        "2. 선택지 B",
-        "3. 선택지 C",
-        "4. 선택지 D"
+        "1. 전문적이고 신뢰감 있는 인상",
+        "2. 따뜻하고 친근한 인상",
+        "3. 감각적이고 트렌디한 인상",
+        "4. 혁신적이고 실험적인 인상"
       ]
-    }
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "핵심 타겟이 가장 자주 겪는 문제 상황은 무엇인가요?",
+      "options": [
+        "1. 시간 부족으로 선택 피로가 큼",
+        "2. 정보 과다로 비교 판단이 어려움",
+        "3. 품질 불신으로 구매 결정을 미룸",
+        "4. 가격 부담으로 체험 자체를 회피"
       ]
-    }"""
-
-
-def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
-    ctx = context or {}
-    base = _join_lines([
-        SYSTEM_PROMPT,
-        "",
-        "아래 제약을 반드시 지키세요:",
-        "- 응답은 반드시 JSON만 출력하세요.",
-        "- 형식: { \"candidates\": [\"...\", ...] }",
-        "- 후보 수는 정확히 3개로 제한하세요.",
-        "- 각 후보는 서로 다른 방향성과 어조를 갖게 하세요.",
-    ])
-
-    if target == "brand_name":
-        return f"""{base}
-
-브랜드 정보: {brand_info}
-문맥(선택적): {ctx}
-
-목표: 브랜드명이 필요합니다. 아래 제약을 지켜 3개의 후보를 생성하세요.
-- 한글 기준 2~12자 권장
-- 간결하고 발음하기 쉬운 이름
-- 각 이름에 대해 짧은 1문장(20자 이내) 이유를 병기하되, 출력 형식은 단순한 문자열 후보 배열로 유지하세요.
-
-반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["이름1", "이름2", "이름3"] }}
-"""
-
-    if target == "name_meaning":
-        return f"""{base}
-
-브랜드: {brand_info.get('brand_name')}
-문맥: {ctx}
-
-목표: 현재 선택된 브랜드명에 대해 서로 다른 해석/의미 설명 3가지를 생성하세요. 각 항목은 1문장(50자 이내)으로 간결하게 작성하세요.
-
-반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["의미1", "의미2", "의미3"] }}
-"""
-
-    if target == "slogan":
-        return f"""{base}
-
-브랜드: {brand_info.get('brand_name')}
-문맥: {ctx}
-
-목표: 핵심 슬로건 3개를 생성하세요. 각 슬로건은 한국어 기준 15자 이내여야 합니다.
-
-반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["슬로건1", "슬로건2", "슬로건3"] }}
-"""
-
-    if target == "story_summary":
-        return f"""{base}
-
-브랜드: {brand_info.get('brand_name')}
-문맥: {ctx}
-
-목표: 브랜드 탄생 서사 요약(스토리) 3가지 변주를 생성하세요. 각 항목은 최대 100자 이내로 작성하세요.
-
-반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["스토리1", "스토리2", "스토리3"] }}
-"""
-
-    # fallback: generic short alternatives
-    return f"""{base}
-
-브랜드 정보: {brand_info}
-문맥: {ctx}
-
-목표: 필드 `{target}`에 대한 짧은 대체 후보 3개를 생성하세요.
-
-반드시 JSON 형식으로만 응답하세요:
-{{ "candidates": ["옵션1", "옵션2", "옵션3"] }}
-"""
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "슬로건이 가장 강조해야 할 가치는 무엇인가요?",
+      "options": [
+        "1. 즉시성(빠른 해결)",
+        "2. 정확성(신뢰 가능한 결과)",
+        "3. 감성 경험(즐거움/만족감)",
+        "4. 효율성(비용/노력 절감)"
+      ]
+    }},
+    {{
+      "question_id": 4,
+      "question_text": "브랜드 스토리는 어떤 톤으로 전달되면 좋을까요?",
+      "options": [
+        "1. 창업자의 문제 해결 여정 중심",
+        "2. 고객 공감 사례 중심",
+        "3. 기술·전문성 근거 중심",
+        "4. 라이프스타일 비전 중심"
+      ]
+    }},
+    {{
+      "question_id": 5,
+      "question_text": "시드 컬러는 어떤 감정을 우선 전달해야 하나요?",
+      "options": [
+        "1. 안정감과 신뢰",
+        "2. 따뜻함과 친근함",
+        "3. 프리미엄과 세련미",
+        "4. 에너지와 도전성"
+      ]
+    }}
+  ]
+}}"""
 
 
 def get_O_mvb_prompt(interview_text: str) -> str:
@@ -223,19 +153,36 @@ def get_A_interview_prompt(brand_info: dict[str, Any]) -> str:
 
 위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
 
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+{INTERVIEW_RULES}
 
 {{
-  "required_question_count": n,
-  "reasoning": "선택된 브랜드 조합은 어떤 감성/장점이 뚜렷하지만, 실제 구현 단계에서 어떤 부분이 모호하여 이를 구체화하기 위해 어떤 내용의 질문 n개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "선택된 브랜드 조합을 실행 전략으로 전환하기 위해 메시지 우선순위, 고객 접점, CS 톤, 콘텐츠 구조, 성과 지표를 확인하는 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
-      "question_text": "질문 내용",
-      "options": ["1. 선택지 A", "2. 선택지 B", "3. 선택지 C", "4. 선택지 D"]
+      "question_text": "브랜드 메시지를 가장 강하게 전달해야 할 1순위 접점은 어디인가요?",
+      "options": ["1. 랜딩/홈페이지", "2. SNS 피드/숏폼", "3. 패키징/언박싱", "4. 오프라인 응대"]
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "초기 고객 신뢰를 만들 때 가장 중요한 증거는 무엇인가요?",
+      "options": ["1. 전문가/인증 근거", "2. 고객 후기/전환 사례", "3. 성분/기술 데이터", "4. 창업자 스토리"]
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "브랜드 톤앤매너는 어떤 스타일이 가장 적합한가요?",
+      "options": ["1. 단정하고 명확한 설명형", "2. 따뜻하고 공감형", "3. 유쾌하고 친근한 대화형", "4. 도전적이고 자신감 있는 선언형"]
+    }},
+    {{
+      "question_id": 4,
+      "question_text": "초기 3개월 콘텐츠 운영의 우선 목표는 무엇인가요?",
+      "options": ["1. 인지도 확보", "2. 리드 수집", "3. 전환율 개선", "4. 재구매 유도"]
+    }},
+    {{
+      "question_id": 5,
+      "question_text": "브랜드 약속을 운영에서 검증할 핵심 지표는 무엇인가요?",
+      "options": ["1. 첫 구매 전환율", "2. 고객 만족도/NPS", "3. 재구매율", "4. CS 해결 속도"]
     }}
   ]
 }}"""
@@ -358,45 +305,6 @@ def get_A3_positioning_prompt(brand_info: dict[str, Any], deepdive_answers_text:
 }}"""
 
 
-def get_A4_core_identity_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
-    return f"""사용자가 선택한 핵심 데이터와 심층 인터뷰 결과를 바탕으로 브랜드 가이드의 '미션, 비전, 핵심 가치(Core Identity)' 영역을 생성하세요.
-
-[사용자 최종 선택값]
-- 이름 선택: {brand_info['brand_name']}
-- 슬로건 선택: {brand_info.get('slogan', '')}
-- 스토리 선택: {brand_info.get('story_summary', '')}
-- 컬러 선택: {brand_info.get('seed_color', '')}
-
-[심층 인터뷰 결과]
-{deepdive_answers_text}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "core_identity": {{
-    "mission": "우리는 [누구]에게 [무엇]을 [어떻게] 제공한다.",
-    "vision": "[시간] 안에 [무엇]이 되는 것",
-    "core_values": [
-      {{
-        "value": "핵심 가치 키워드 1",
-        "description": "가치에 대한 20자 이내의 설명",
-        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
-      }},
-      {{
-        "value": "핵심 가치 키워드 2",
-        "description": "가치에 대한 20자 이내의 설명",
-        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
-      }},
-      {{
-        "value": "핵심 가치 키워드 3",
-        "description": "가치에 대한 20자 이내의 설명",
-        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
-      }}
-    ]
-  }}
-}}"""
-
-
 def get_B_interview_prompt(brand_info: dict[str, Any]) -> str:
     return f"""당신은 지금 창업자가 확정한 [최종 브랜드 조합]을 바탕으로, 이 브랜드에 열광할 '핵심 타겟 페르소나'와 '고객 여정 맵(Customer Journey Map)'을 작성할 준비를 하고 있습니다.
 
@@ -405,21 +313,38 @@ def get_B_interview_prompt(brand_info: dict[str, Any]) -> str:
 
 위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
 
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+{INTERVIEW_RULES}
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
 
 {{
-  "required_question_count": 1,
-  "reasoning": "다음 단계에서 입체적 페르소나 / 고객 여정 맵을 구체적으로 작성하기 위해, 현재 어떤 정보가 부족하므로 이를 파악할 질문 1개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "입체적 페르소나와 여정 설계를 위해 라이프스타일, 구매 트리거, 의사결정 요인, 장벽, 재구매 동기를 확인하는 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "타겟 고객의 가장 중요한 라이프스타일/결핍은 무엇입니까?",
-      "options": ["1. ...", "2. ...", "3. ...", "4. ..."]
+      "options": ["1. 시간 부족으로 빠른 결정 필요", "2. 정보 불신으로 검증 욕구 큼", "3. 감정적 위로/동기 필요", "4. 비용 효율을 최우선 고려"]
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "구매 결정을 촉발하는 가장 강한 계기는 무엇입니까?",
+      "options": ["1. 한정 혜택/마감", "2. 신뢰 가능한 후기", "3. 지인 추천", "4. 체험 후 만족"]
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "비교 단계에서 고객이 가장 오래 보는 정보는 무엇입니까?",
+      "options": ["1. 가격/구성", "2. 성능/품질 지표", "3. 브랜드 철학/메시지", "4. 사용 편의성"]
+    }},
+    {{
+      "question_id": 4,
+      "question_text": "구매를 망설이게 만드는 대표 장벽은 무엇입니까?",
+      "options": ["1. 효과 불확실성", "2. 가격 부담", "3. 사용 복잡성", "4. 사후지원 불안"]
+    }},
+    {{
+      "question_id": 5,
+      "question_text": "재구매를 유도하는 가장 효과적인 장치는 무엇입니까?",
+      "options": ["1. 구독/정기배송", "2. 멤버십 리워드", "3. 개인화 추천", "4. 커뮤니티 소속감"]
     }}
   ]
 }}"""
@@ -545,23 +470,545 @@ def get_C_interview_prompt(brand_info: dict[str, Any]) -> str:
 
 위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
 
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
+{INTERVIEW_RULES}
 
 아래 JSON 형식에 맞추어 응답을 생성하세요:
 
 {{
-  "required_question_count": 1,
-  "reasoning": "비주얼 아이덴티티를 구체화하기 위해 필요한 핵심 질문 1개를 생성했습니다.",
+  "required_question_count": 5,
+  "reasoning": "비주얼 시스템의 일관성을 높이기 위해 컬러 톤, 대비 수준, 폰트 인상, 이미지 무드, 레이아웃 밀도를 확인하는 질문 5개를 생성했습니다.",
   "questions": [
     {{
       "question_id": 1,
       "question_text": "브랜드의 시각 무드를 가장 잘 설명하는 방향은 무엇입니까?",
       "options": ["1. 정갈하고 고급스러운 방향", "2. 따뜻하고 친근한 방향", "3. 자연스럽고 지속가능한 방향", "4. 실험적이고 감각적인 방향"]
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "메인 컬러의 채도/명도는 어떤 성향이 적합합니까?",
+      "options": ["1. 저채도·중명도", "2. 저채도·고명도", "3. 고채도·중명도", "4. 고채도·저명도"]
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "타이포그래피 인상에서 우선할 기준은 무엇입니까?",
+      "options": ["1. 가독성 최우선", "2. 개성 있는 조형미", "3. 프리미엄 무드", "4. 캐주얼 친밀감"]
+    }},
+    {{
+      "question_id": 4,
+      "question_text": "대표 이미지 스타일은 어떤 촬영/그래픽 방향이 좋습니까?",
+      "options": ["1. 미니멀 제품 중심", "2. 인물 감정 중심", "3. 사용 맥락 스토리 중심", "4. 패턴/그래픽 중심"]
+    }},
+    {{
+      "question_id": 5,
+      "question_text": "레이아웃 컴포지션에서 선호하는 밀도는 무엇입니까?",
+      "options": ["1. 넉넉한 여백 중심", "2. 균형형 그리드 중심", "3. 정보밀도 높은 편집형", "4. 실험적 비대칭 구성"]
     }}
   ]
+}}"""
+
+
+def get_C1_visual_identity_prompt(
+    brand_info: dict[str, Any],
+    previous_context: str,
+    interview_data_c: str,
+) -> str:
+    return f"""브랜드의 비주얼 시스템을 설계하세요.
+
+[확정된 최종 브랜드 조합]
+{brand_info}
+
+[지금까지 확정된 브랜드 전략]
+{previous_context}
+
+[비주얼 인터뷰 결과]
+{interview_data_c}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+
+{{
+  "color_palette": [
+    {{ "color_name": "주조색명", "hex_code": "#XXXXXX", "role": "Primary", "reason": "선정 이유" }},
+    {{ "color_name": "보조색명", "hex_code": "#XXXXXX", "role": "Secondary", "reason": "선정 이유" }},
+    {{ "color_name": "강조색명", "hex_code": "#XXXXXX", "role": "Accent", "reason": "선정 이유" }},
+    {{ "color_name": "배경색명", "hex_code": "#XXXXXX", "role": "Background", "reason": "선정 이유" }},
+    {{ "color_name": "텍스트색명", "hex_code": "#XXXXXX", "role": "Text Color", "reason": "선정 이유" }}
+  ],
+  "typography": {{
+    "primary_font": {{
+      "font_name_kr": "한글 헤드라인 서체명",
+      "google_fonts_family": "Google Fonts 가족명",
+      "weight_recommendation": 800,
+      "usage_and_reason": "헤드라인/타이틀에 어울리는 이유"
+    }},
+    "secondary_font": {{
+      "font_name_kr": "한글 본문 서체명",
+      "google_fonts_family": "Google Fonts 가족명",
+      "weight_recommendation": 400,
+      "usage_and_reason": "본문/보조 텍스트에 어울리는 이유"
+    }}
+  }},
+  "visual_mood_guide": {{
+    "photography_do": ["권장 표현 1", "권장 표현 2", "권장 표현 3"],
+    "photography_dont": ["금지 표현 1", "금지 표현 2", "금지 표현 3"],
+    "mood_keywords": ["키워드 1", "키워드 2", "키워드 3", "키워드 4", "키워드 5"]
+  }},
+  "design_principles": {{
+    "layout_direction": "레이아웃 방향성 설명",
+    "image_processing": "이미지 보정/가공 규칙 설명"
+  }}
+}}"""
+
+
+def get_DE_interview_prompt(brand_info: dict[str, Any], interview_data_c: str) -> str:
+    return f"""확정된 브랜드 조합과 C단계 결과를 바탕으로 로고와 캐릭터를 설계할 준비를 하고 있습니다.
+
+로고 심볼과 캐릭터를 실제로 그리기 위해 반드시 필요한 조형적 결정사항을 질문으로 만드세요.
+특히 아래 항목은 이미지 생성 품질에 직접적인 영향을 주므로, 최소 5개 질문으로 반드시 포함하세요.
+로고와 캐릭터의 질문 비율은 1:1이며 홀수 질문일 경우 더 정보가 없는 쪽에 질문 비율을 추가하세요.
+
+- 심볼의 선 두께/무게감 (예: 얇고 정교한 선 vs 굵고 힘 있는 선)
+- 심볼의 조형 원리 (예: 곡선/직선/기하학적 형태)
+- 캐릭터의 성격과 감정적 톤
+
+C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되는 질문은 만들지 마세요.
+
+위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
+
+{INTERVIEW_RULES}
+
+[확정된 최종 브랜드 조합]
+{brand_info}
+
+[비주얼 인터뷰 결과]
+{interview_data_c}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+{{
+  "required_question_count": 5,
+  "reasoning": "로고 조형 언어와 캐릭터 페르소나를 일관되게 설계하기 위해 선 두께, 조형 원리, 대비, 캐릭터 성격, 사용 맥락을 확인하는 질문 5개를 생성했습니다.",
+  "questions": [
+    {{
+      "question_id": 1,
+      "question_text": "로고 심볼의 선은 어떤 두께와 무게감을 가져야 합니까?",
+      "options": ["1. 얇고 섬세한 선으로 정교함을 강조", "2. 균일한 중간 두께로 안정감을 강조", "3. 굵고 힘 있는 선으로 존재감을 강조", "4. 선 대신 solid shape 위주의 면 구성"]
+    }},
+    {{
+      "question_id": 2,
+      "question_text": "심볼의 조형 원리에서 가장 우선시되는 형태는 무엇입니까?",
+      "options": ["1. 절제된 기하학적 도형", "2. 유기적이고 부드러운 곡선", "3. 정적인 수평/수직 구조", "4. 리듬감 있는 반복 패턴"]
+    }},
+    {{
+      "question_id": 3,
+      "question_text": "브랜드 캐릭터가 전달해야 할 핵심 감정적 인상은 무엇입니까?",
+      "options": ["1. 고요하고 신뢰감 있는 인상", "2. 따뜻하고 친근한 인상", "3. 지적이고 세련된 인상", "4. 신비롭고 몽환적인 인상"]
+    }},
+    {{
+      "question_id": 4,
+      "question_text": "로고 심볼의 시각적 대비 수준은 어느 정도가 적합합니까?",
+      "options": ["1. 낮은 대비의 안정적 구성", "2. 중간 대비의 균형형", "3. 강한 대비의 임팩트형", "4. 단색 면 중심의 아이콘형"]
+    }},
+    {{
+      "question_id": 5,
+      "question_text": "캐릭터가 가장 자주 활용될 접점은 어디입니까?",
+      "options": ["1. SNS 콘텐츠", "2. 패키지/스티커", "3. 웹/앱 온보딩", "4. 오프라인 POP/굿즈"]
+    }}
+  ]
+}}"""
+
+
+def get_D_logo_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
+    return f"""브랜드 로고 아이덴티티를 설계하세요.
+
+[확정된 최종 브랜드 조합]
+{brand_info}
+
+[심층 인터뷰 결과]
+{deepdive_answers_text}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+
+{{
+  "logo_identity": {{
+    "concept": {{
+      "symbol_reason": "심볼 선정 이유",
+      "color_reason": "컬러 선정 이유",
+      "overall_message": "로고가 전달해야 할 전체 메시지",
+      "direction_text": "이미지 생성용 디렉션 텍스트"
+    }},
+    "guide": {{
+      "minimum_size": "최소 사용 크기",
+      "clear_space": "클리어 스페이스 규정"
+    }}
+  }}
+}}"""
+
+
+def get_E_character_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
+    return f"""브랜드 캐릭터 가이드를 설계하세요.
+
+[확정된 최종 브랜드 조합]
+{brand_info}
+
+[심층 인터뷰 결과]
+{deepdive_answers_text}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+
+{{
+  "character_guide": {{
+    "intro": {{
+      "name": "캐릭터 이름",
+      "appearance": "캐릭터 외형 묘사",
+      "symbolic_value": "상징 가치"
+    }},
+    "reasoning": {{
+      "selection_reason": "캐릭터 선택 이유",
+      "emotional_connection": "감정적 연결 포인트"
+    }},
+    "story": {{
+      "background": "캐릭터 배경 스토리",
+      "brand_role": "브랜드 내 역할"
+    }}
+  }}
+}}"""
+
+
+def get_DE_identity_prompt(
+    brand_info: dict[str, Any],
+    data_c: dict[str, Any],
+    previous_context: str,
+    interview_data_de: str,
+) -> str:
+    return f"""브랜드의 로고와 캐릭터 가이드를 동시에 설계하세요.
+
+[확정된 최종 브랜드 조합]
+{brand_info}
+
+[비주얼 시스템 데이터]
+{data_c}
+
+[지금까지 확정된 브랜드 전략]
+{previous_context}
+
+[로고·캐릭터 인터뷰 결과]
+{interview_data_de}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+
+{{
+  "logo_identity": {{
+    "concept": {{
+      "symbol_reason": "심볼 선정 이유",
+      "color_reason": "컬러 선정 이유",
+      "overall_message": "로고가 전달해야 할 전체 메시지",
+      "direction_text": "이미지 생성용 디렉션 텍스트"
+    }},
+    "guide": {{
+      "minimum_size": "최소 사용 크기",
+      "clear_space": "클리어 스페이스 규정"
+    }}
+  }},
+  "character_guide": {{
+    "intro": {{
+      "name": "캐릭터 이름",
+      "appearance": "캐릭터 외형 묘사",
+      "symbolic_value": "상징 가치"
+    }},
+    "reasoning": {{
+      "selection_reason": "캐릭터 선택 이유",
+      "emotional_connection": "감정적 연결 포인트"
+    }},
+    "story": {{
+      "background": "캐릭터 배경 스토리",
+      "brand_role": "브랜드 내 역할"
+    }}
+  }}
+}}"""
+
+
+def get_logo_image_prompt(
+    brand_name: str,
+    direction_text: str,
+    brand_info: dict,
+    deepdive_answers_text: str,
+    data_c: dict,
+) -> str:
+    # 💡 [보강] 방어적 색상 추출: role이 일치하지 않아도 안전하게 추출
+    palette = data_c.get("color_palette", [])
+    
+    # role 키가 없는 경우도 대비하여 role.lower() 비교
+    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
+    
+    # 우선순위 부여: primary -> secondary -> accent 순으로 찾고 없으면 기본값
+    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
+    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
+
+    # 무드 키워드/레이아웃도 방어적 접근
+    mood_guide = data_c.get("visual_mood_guide", {})
+    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["minimal", "professional"]))
+    
+    design_prin = data_c.get("design_principles", {})
+    layout_hint = design_prin.get("layout_direction", "Balanced and centered composition")
+
+    return f"""당신은 세계적 수준의 브랜드 아이덴티티(BI) 디자이너입니다.
+아래 브랜드를 위한 심볼/엠블럼 하나를 완성해 주세요.
+텍스트나 글자는 이미지에 절대 포함하지 마세요. 심볼 그래픽만 생성합니다.
+
+[확정된 최종 브랜드 조합]: {brand_info}
+
+[심층 인터뷰 결과]: {deepdive_answers_text}
+
+[브랜드명]: {brand_name}
+[디자인 핵심 방향성]: {direction_text}
+
+[조형 스타일]
+- 구도 원칙: {layout_hint}
+- 무드: {mood_keywords}
+
+[컬러]
+- 다음 색상만 사용: {color_palette}
+
+[구성]
+- 심볼이 캔버스 중앙에 오도록, 사방에 충분한 여백을 확보
+- 정사각형 비율에 가깝게, 아이콘/앱 아이콘으로도 쓸 수 있는 독립적인 형태
+
+[배경 및 마감]
+- 배경은 완전한 순백색(#FFFFFF)
+- 그라데이션, 텍스처, 사실적 음영 없이 solid color로만 표현
+- 가장자리는 흐트러짐 없이 선명하고 매끈하게, 스케치·붓터치·워터마크·서명 없음
+
+[텍스트 금지]
+- 어떤 형태의 문자, 알파벳, 숫자, 기호도 이미지 안에 그리지 마세요.
+
+[목적]
+- '전문 디자이너의 포트폴리오 메인 작품'으로 사용될 로고입니다.
+- AI가 그리는 로고가 아니라, Adobe Illustrator로 정교하게 벡터화한 로고처럼 선명하게 디자인하세요.
+- 불필요한 장식은 모두 제거하고, 오직 '심볼의 기하학적 형태'와 '브랜드가 지향하는 감정'만을 강렬한 대비로 표현하세요.
+"""
+
+
+def get_character_image_prompt(
+    brand_name: str,
+    char_name: str,
+    char_appearance: str,
+    symbolic_value: str,
+    emotional_connection: str,
+    brand_info: dict,              # 추가됨
+    deepdive_answers_text: str,    # 추가됨
+    data_c: dict,
+) -> str:
+    # 💡 [보강] 로고 생성 로직과 동일하게 방어적 색상 추출
+    palette = data_c.get("color_palette", [])
+    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
+    
+    # Primary/Secondary/Accent가 없을 경우에 대한 대비
+    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
+    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
+    
+    # 💡 방어적 무드 키워드 추출
+    mood_guide = data_c.get("visual_mood_guide", {})
+    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["friendly", "professional"]))
+
+    return f"""당신은 세계적인 수준의 브랜드 캐릭터(마스코트) 전문 일러스트레이터입니다.
+다음 지시사항에 따라 브랜드를 대변할 매력적인 캐릭터를 디자인해 주세요.
+
+[브랜드명]: {brand_name}
+[확정된 최종 브랜드 조합]: {brand_info}
+[심층 인터뷰 결과]: {deepdive_answers_text}
+[캐릭터 이름]: {char_name}
+[캐릭터 외형 묘사]: {char_appearance}
+[캐릭터가 상징하는 가치]: {symbolic_value}
+[고객과의 감정적 연결]: {emotional_connection}
+
+[브랜드 톤앤매너]
+- 무드: {mood_keywords}
+- 컬러: 다음 색상만 사용: {color_palette}
+
+[조형 스타일]
+- 로고와 동일한 브랜드 룩을 유지하는 professional flat vector illustration
+- 균일한 두께의 선, 그라데이션·텍스처·사실적 음영 없이 solid color로만 표현
+- 가장자리는 흐트러짐 없이 선명하고 매끈하게 (clean vector edges)
+
+[구도]
+- 캐릭터의 전신이나 상반신이 중앙에 명확하게 배치된 프로필 샷
+- 사방에 충분한 여백을 확보한 독립적인 형태 (iconography style)
+
+[배경 및 마감]
+- 배경은 완전한 순백색(Solid White, #FFFFFF)
+- 스케치·붓터치·워터마크·서명 없음
+
+[표현]
+- 위에서 정의한 상징적 가치와 감정적 연결이 표정과 자세에서 드러나도록 표현
+- 타겟 고객이 호감을 느낄 수 있는 친근하고 호소력 있는 인상
+
+[텍스트 금지]
+- 이미지 안에 어떤 텍스트나 글자, 기호도 포함하지 마세요.
+
+[목적]
+- 전문 브랜딩 에이전시 포트폴리오에 즉시 사용 가능한, 높은 상업적 가치를 지닌 캐릭터 디자인입니다.
+- AI가 생성한 무작위 그림이 아니라, Adobe Illustrator로 정교하게 설계된 벡터 마스코트처럼 완벽한 비례와 선명한 라인을 가져야 합니다.
+- 불필요한 장식은 모두 제거하고, 오직 캐릭터의 표정과 상징적 가치가 강렬한 대비를 통해 드러나도록 디자인하세요.
+"""
+
+
+def get_brand_gallery_prompt(brand_data: dict[str, Any]) -> str:
+    return f"""{_brand_context(brand_data)}
+
+이 정보를 바탕으로 브랜드 초안 후보 3개를 생성하세요.
+각 후보는 서로 다른 톤과 사용 맥락을 가져야 합니다.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+
+{{
+  "brands": [
+    {{
+      "name": "브랜드명 1",
+      "meaning": "브랜드명 1의 의미와 어감",
+      "story": "브랜드명 1의 탄생/스토리",
+      "slogan": "핵심 슬로건 1",
+      "typography": {{
+        "korean": "추천 한글 폰트",
+        "english": "추천 영문 폰트",
+        "reason": "이 조합이 어울리는 이유"
+      }},
+      "character": {{
+        "name": "캐릭터 이름",
+        "concept": "캐릭터 컨셉",
+        "personality": "성격 3가지, 쉼표 구분",
+        "visual": "외형 묘사"
+      }},
+      "logo_design": {{
+        "brand_name": "브랜드명 1",
+        "brand_topic": "사업 주제",
+        "core_value": "핵심 가치",
+        "target_mood": "브랜드 감성",
+        "symbol_type": "심볼 스타일",
+        "font_style": "서체 스타일",
+        "font_reference": "서체 레퍼런스",
+        "font_weight": "서체 굵기",
+        "brand_color": "브랜드 컬러",
+        "logo_type": "로고 구성 방식",
+        "background": "배경"
+      }}
+    }},
+    {{ "name": "브랜드명 2", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }},
+    {{ "name": "브랜드명 3", "meaning": "...", "story": "...", "slogan": "...", "typography": {{ "korean": "...", "english": "...", "reason": "..." }}, "character": {{ "name": "...", "concept": "...", "personality": "...", "visual": "..." }}, "logo_design": {{ "brand_name": "...", "brand_topic": "...", "core_value": "...", "target_mood": "...", "symbol_type": "...", "font_style": "...", "font_reference": "...", "font_weight": "...", "brand_color": "...", "logo_type": "...", "background": "..." }} }}
+  ]
+}}"""
+
+
+def get_A_field_regen_prompt(brand_info: dict[str, Any], target: str, context: dict[str, Any] | None = None) -> str:
+    ctx = context or {}
+    base = _join_lines([
+        SYSTEM_PROMPT,
+        "",
+        "아래 제약을 반드시 지키세요:",
+        "- 응답은 반드시 JSON만 출력하세요.",
+        "- 형식: { \"candidates\": [\"...\", ...] }",
+        "- 후보 수는 정확히 3개로 제한하세요.",
+        "- 각 후보는 서로 다른 방향성과 어조를 갖게 하세요.",
+    ])
+
+    if target == "brand_name":
+        return f"""{base}
+
+브랜드 정보: {brand_info}
+문맥(선택적): {ctx}
+
+목표: 브랜드명이 필요합니다. 아래 제약을 지켜 3개의 후보를 생성하세요.
+- 한글 기준 2~12자 권장
+- 간결하고 발음하기 쉬운 이름
+- 각 이름에 대해 짧은 1문장(20자 이내) 이유를 병기하되, 출력 형식은 단순한 문자열 후보 배열로 유지하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["이름1", "이름2", "이름3"] }}
+"""
+
+    if target == "name_meaning":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 현재 선택된 브랜드명에 대해 서로 다른 해석/의미 설명 3가지를 생성하세요. 각 항목은 1문장(50자 이내)으로 간결하게 작성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["의미1", "의미2", "의미3"] }}
+"""
+
+    if target == "slogan":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 핵심 슬로건 3개를 생성하세요. 각 슬로건은 한국어 기준 15자 이내여야 합니다.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["슬로건1", "슬로건2", "슬로건3"] }}
+"""
+
+    if target == "story_summary":
+        return f"""{base}
+
+브랜드: {brand_info.get('brand_name')}
+문맥: {ctx}
+
+목표: 브랜드 탄생 서사 요약(스토리) 3가지 변주를 생성하세요. 각 항목은 최대 100자 이내로 작성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["스토리1", "스토리2", "스토리3"] }}
+"""
+
+    # fallback: generic short alternatives
+    return f"""{base}
+
+브랜드 정보: {brand_info}
+문맥: {ctx}
+
+목표: 필드 `{target}`에 대한 짧은 대체 후보 3개를 생성하세요.
+
+반드시 JSON 형식으로만 응답하세요:
+{{ "candidates": ["옵션1", "옵션2", "옵션3"] }}
+"""
+
+
+def get_A4_core_identity_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
+    return f"""사용자가 선택한 핵심 데이터와 심층 인터뷰 결과를 바탕으로 브랜드 가이드의 '미션, 비전, 핵심 가치(Core Identity)' 영역을 생성하세요.
+
+[사용자 최종 선택값]
+- 이름 선택: {brand_info['brand_name']}
+- 슬로건 선택: {brand_info.get('slogan', '')}
+- 스토리 선택: {brand_info.get('story_summary', '')}
+- 컬러 선택: {brand_info.get('seed_color', '')}
+
+[심층 인터뷰 결과]
+{deepdive_answers_text}
+
+아래 JSON 형식에 맞추어 응답을 생성하세요:
+
+{{
+  "core_identity": {{
+    "mission": "우리는 [누구]에게 [무엇]을 [어떻게] 제공한다.",
+    "vision": "[시간] 안에 [무엇]이 되는 것",
+    "core_values": [
+      {{
+        "value": "핵심 가치 키워드 1",
+        "description": "가치에 대한 20자 이내의 설명",
+        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
+      }},
+      {{
+        "value": "핵심 가치 키워드 2",
+        "description": "가치에 대한 20자 이내의 설명",
+        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
+      }},
+      {{
+        "value": "핵심 가치 키워드 3",
+        "description": "가치에 대한 20자 이내의 설명",
+        "example": "실제 팀원들의 업무 현장 행동/구현 예시 1줄"
+      }}
+    ]
+  }}
 }}"""
 
 
@@ -640,63 +1087,6 @@ def get_C3_visual_mood_prompt(brand_info: dict[str, Any], deepdive_answers_text:
 }}"""
 
 
-def get_D_logo_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
-    return f"""브랜드 로고 아이덴티티를 설계하세요.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-[심층 인터뷰 결과]
-{deepdive_answers_text}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "logo_identity": {{
-    "concept": {{
-      "symbol_reason": "심볼 선정 이유",
-      "color_reason": "컬러 선정 이유",
-      "overall_message": "로고가 전달해야 할 전체 메시지",
-      "direction_text": "이미지 생성용 디렉션 텍스트"
-    }},
-    "guide": {{
-      "minimum_size": "최소 사용 크기",
-      "clear_space": "클리어 스페이스 규정"
-    }}
-  }}
-}}"""
-
-
-def get_E_character_prompt(brand_info: dict[str, Any], deepdive_answers_text: str = "") -> str:
-    return f"""브랜드 캐릭터 가이드를 설계하세요.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-[심층 인터뷰 결과]
-{deepdive_answers_text}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "character_guide": {{
-    "intro": {{
-      "name": "캐릭터 이름",
-      "appearance": "캐릭터 외형 묘사",
-      "symbolic_value": "상징 가치"
-    }},
-    "reasoning": {{
-      "selection_reason": "캐릭터 선택 이유",
-      "emotional_connection": "감정적 연결 포인트"
-    }},
-    "story": {{
-      "background": "캐릭터 배경 스토리",
-      "brand_role": "브랜드 내 역할"
-    }}
-  }}
-}}"""
-
-
 def get_logo_variables_prompt(business_type: str, vibes: list[str], target: str, keywords: str = "") -> str:
     mood_options = [
         "모던 & 신뢰",
@@ -738,284 +1128,3 @@ def get_logo_variables_prompt(business_type: str, vibes: list[str], target: str,
   "recommendations_reason": "이 변수들을 추천한 이유 2-3문장"
 }}"""
 
-def get_logo_image_prompt(
-    brand_name: str,
-    direction_text: str,
-    brand_info: dict,
-    deepdive_answers_text: str,
-    data_c: dict,
-) -> str:
-    # 💡 [보강] 방어적 색상 추출: role이 일치하지 않아도 안전하게 추출
-    palette = data_c.get("color_palette", [])
-    
-    # role 키가 없는 경우도 대비하여 role.lower() 비교
-    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
-    
-    # 우선순위 부여: primary -> secondary -> accent 순으로 찾고 없으면 기본값
-    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
-    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
-
-    # 무드 키워드/레이아웃도 방어적 접근
-    mood_guide = data_c.get("visual_mood_guide", {})
-    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["minimal", "professional"]))
-    
-    design_prin = data_c.get("design_principles", {})
-    layout_hint = design_prin.get("layout_direction", "Balanced and centered composition")
-
-    return f"""당신은 세계적 수준의 브랜드 아이덴티티(BI) 디자이너입니다.
-아래 브랜드를 위한 심볼/엠블럼 하나를 완성해 주세요.
-텍스트나 글자는 이미지에 절대 포함하지 마세요. 심볼 그래픽만 생성합니다.
-
-[확정된 최종 브랜드 조합]: {brand_info}
-
-[심층 인터뷰 결과]: {deepdive_answers_text}
-
-[브랜드명]: {brand_name}
-[디자인 핵심 방향성]: {direction_text}
-
-[조형 스타일]
-- 구도 원칙: {layout_hint}
-- 무드: {mood_keywords}
-
-[컬러]
-- 다음 색상만 사용: {color_palette}
-
-[구성]
-- 심볼이 캔버스 중앙에 오도록, 사방에 충분한 여백을 확보
-- 정사각형 비율에 가깝게, 아이콘/앱 아이콘으로도 쓸 수 있는 독립적인 형태
-
-[배경 및 마감]
-- 배경은 완전한 순백색(#FFFFFF)
-- 그라데이션, 텍스처, 사실적 음영 없이 solid color로만 표현
-- 가장자리는 흐트러짐 없이 선명하고 매끈하게, 스케치·붓터치·워터마크·서명 없음
-
-[텍스트 금지]
-- 어떤 형태의 문자, 알파벳, 숫자, 기호도 이미지 안에 그리지 마세요.
-
-[목적]
-- '전문 디자이너의 포트폴리오 메인 작품'으로 사용될 로고입니다.
-- AI가 그리는 로고가 아니라, Adobe Illustrator로 정교하게 벡터화한 로고처럼 선명하게 디자인하세요.
-- 불필요한 장식은 모두 제거하고, 오직 '심볼의 기하학적 형태'와 '브랜드가 지향하는 감정'만을 강렬한 대비로 표현하세요.
-"""
-
-def get_character_image_prompt(
-    brand_name: str,
-    char_name: str,
-    char_appearance: str,
-    symbolic_value: str,
-    emotional_connection: str,
-    brand_info: dict,              # 추가됨
-    deepdive_answers_text: str,    # 추가됨
-    data_c: dict,
-) -> str:
-    # 💡 [보강] 로고 생성 로직과 동일하게 방어적 색상 추출
-    palette = data_c.get("color_palette", [])
-    hex_by_role = {c.get("role", "").lower(): c.get("hex_code", "#000000") for c in palette}
-    
-    # Primary/Secondary/Accent가 없을 경우에 대한 대비
-    main_color = hex_by_role.get("primary") or hex_by_role.get("secondary") or "#000000"
-    color_palette = f"{main_color}, {hex_by_role.get('secondary', '#FFFFFF')}, {hex_by_role.get('accent', '#CCCCCC')}"
-    
-    # 💡 방어적 무드 키워드 추출
-    mood_guide = data_c.get("visual_mood_guide", {})
-    mood_keywords = ", ".join(mood_guide.get("mood_keywords", ["friendly", "professional"]))
-
-    return f"""당신은 세계적인 수준의 브랜드 캐릭터(마스코트) 전문 일러스트레이터입니다.
-다음 지시사항에 따라 브랜드를 대변할 매력적인 캐릭터를 디자인해 주세요.
-
-[브랜드명]: {brand_name}
-[확정된 최종 브랜드 조합]: {brand_info}
-[심층 인터뷰 결과]: {deepdive_answers_text}
-[캐릭터 이름]: {char_name}
-[캐릭터 외형 묘사]: {char_appearance}
-[캐릭터가 상징하는 가치]: {symbolic_value}
-[고객과의 감정적 연결]: {emotional_connection}
-
-[브랜드 톤앤매너]
-- 무드: {mood_keywords}
-- 컬러: 다음 색상만 사용: {color_palette}
-
-[조형 스타일]
-- 로고와 동일한 브랜드 룩을 유지하는 professional flat vector illustration
-- 균일한 두께의 선, 그라데이션·텍스처·사실적 음영 없이 solid color로만 표현
-- 가장자리는 흐트러짐 없이 선명하고 매끈하게 (clean vector edges)
-
-[구도]
-- 캐릭터의 전신이나 상반신이 중앙에 명확하게 배치된 프로필 샷
-- 사방에 충분한 여백을 확보한 독립적인 형태 (iconography style)
-
-[배경 및 마감]
-- 배경은 완전한 순백색(Solid White, #FFFFFF)
-- 스케치·붓터치·워터마크·서명 없음
-
-[표현]
-- 위에서 정의한 상징적 가치와 감정적 연결이 표정과 자세에서 드러나도록 표현
-- 타겟 고객이 호감을 느낄 수 있는 친근하고 호소력 있는 인상
-
-[텍스트 금지]
-- 이미지 안에 어떤 텍스트나 글자, 기호도 포함하지 마세요.
-
-[목적]
-- 전문 브랜딩 에이전시 포트폴리오에 즉시 사용 가능한, 높은 상업적 가치를 지닌 캐릭터 디자인입니다.
-- AI가 생성한 무작위 그림이 아니라, Adobe Illustrator로 정교하게 설계된 벡터 마스코트처럼 완벽한 비례와 선명한 라인을 가져야 합니다.
-- 불필요한 장식은 모두 제거하고, 오직 캐릭터의 표정과 상징적 가치가 강렬한 대비를 통해 드러나도록 디자인하세요.
-"""
-
-
-def get_C0_visual_interview_prompt(brand_info: dict[str, Any]) -> str:
-    return get_C_interview_prompt(brand_info)
-
-
-def get_C1_visual_identity_prompt(
-    brand_info: dict[str, Any],
-    previous_context: str,
-    interview_data_c: str,
-) -> str:
-    return f"""브랜드의 비주얼 시스템을 설계하세요.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-[지금까지 확정된 브랜드 전략]
-{previous_context}
-
-[비주얼 인터뷰 결과]
-{interview_data_c}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "color_palette": [
-    {{ "color_name": "주조색명", "hex_code": "#XXXXXX", "role": "Primary", "reason": "선정 이유" }},
-    {{ "color_name": "보조색명", "hex_code": "#XXXXXX", "role": "Secondary", "reason": "선정 이유" }},
-    {{ "color_name": "강조색명", "hex_code": "#XXXXXX", "role": "Accent", "reason": "선정 이유" }},
-    {{ "color_name": "배경색명", "hex_code": "#XXXXXX", "role": "Background", "reason": "선정 이유" }},
-    {{ "color_name": "텍스트색명", "hex_code": "#XXXXXX", "role": "Text Color", "reason": "선정 이유" }}
-  ],
-  "typography": {{
-    "primary_font": {{
-      "font_name_kr": "한글 헤드라인 서체명",
-      "google_fonts_family": "Google Fonts 가족명",
-      "weight_recommendation": 800,
-      "usage_and_reason": "헤드라인/타이틀에 어울리는 이유"
-    }},
-    "secondary_font": {{
-      "font_name_kr": "한글 본문 서체명",
-      "google_fonts_family": "Google Fonts 가족명",
-      "weight_recommendation": 400,
-      "usage_and_reason": "본문/보조 텍스트에 어울리는 이유"
-    }}
-  }},
-  "visual_mood_guide": {{
-    "photography_do": ["권장 표현 1", "권장 표현 2", "권장 표현 3"],
-    "photography_dont": ["금지 표현 1", "금지 표현 2", "금지 표현 3"],
-    "mood_keywords": ["키워드 1", "키워드 2", "키워드 3", "키워드 4", "키워드 5"]
-  }},
-  "design_principles": {{
-    "layout_direction": "레이아웃 방향성 설명",
-    "image_processing": "이미지 보정/가공 규칙 설명"
-  }}
-}}"""
-
-
-def get_DE_interview_prompt(brand_info: dict[str, Any], interview_data_c: str) -> str:
-    return f"""확정된 브랜드 조합과 C단계 결과를 바탕으로 로고와 캐릭터를 설계할 준비를 하고 있습니다.
-
-로고 심볼과 캐릭터를 실제로 그리기 위해 반드시 필요한 조형적 결정사항을 질문으로 만드세요.
-특히 아래 항목은 이미지 생성 품질에 직접적인 영향을 주므로, 최소 5개 질문으로 반드시 포함하세요.
-로고와 캐릭터의 질문 비율은 1:1이며 홀수 질문일 경우 더 정보가 없는 쪽에 질문 비율을 추가하세요.
-
-- 심볼의 선 두께/무게감 (예: 얇고 정교한 선 vs 굵고 힘 있는 선)
-- 심볼의 조형 원리 (예: 곡선/직선/기하학적 형태)
-- 캐릭터의 성격과 감정적 톤
-
-C단계에서 이미 확정된 컬러, 무드, 레이아웃 원칙과 중복되는 질문은 만들지 마세요.
-
-위 결과물들을 완벽하게 도출하기 위해, 확정된 뼈대 정보에서 가장 비어있는 구체적인 디테일을 파악하여 창업자에게 물어볼 핵심 질문 n개를 생성하세요.
-
-[엄격한 제약 사항]
-- 질문의 총 개수(n)는 반드시 5개 이상, 10개 이하여야 합니다.
-- 모든 질문은 반드시 4지선다형 객관식이어야 하며, 각 선택지는 서로 완전히 다른 방향성을 제시해야 합니다.
-- 마크다운이나 부가 설명 없이 오직 아래의 JSON 형식으로만 출력하세요.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-[비주얼 인터뷰 결과]
-{interview_data_c}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-{{
-  "required_question_count": 3,
-  "reasoning": "로고 심볼의 선 두께와 조형 원리, 캐릭터의 성격을 구체화하기 위해 핵심 질문 3개를 생성했습니다.",
-  "questions": [
-    {{
-      "question_id": 1,
-      "question_text": "로고 심볼의 선은 어떤 두께와 무게감을 가져야 합니까?",
-      "options": ["1. 얇고 섬세한 선으로 정교함을 강조", "2. 균일한 중간 두께로 안정감을 강조", "3. 굵고 힘 있는 선으로 존재감을 강조", "4. 선 대신 solid shape 위주의 면 구성"]
-    }},
-    {{
-      "question_id": 2,
-      "question_text": "심볼의 조형 원리에서 가장 우선시되는 형태는 무엇입니까?",
-      "options": ["1. 절제된 기하학적 도형", "2. 유기적이고 부드러운 곡선", "3. 정적인 수평/수직 구조", "4. 리듬감 있는 반복 패턴"]
-    }},
-    {{
-      "question_id": 3,
-      "question_text": "브랜드 캐릭터가 전달해야 할 핵심 감정적 인상은 무엇입니까?",
-      "options": ["1. 고요하고 신뢰감 있는 인상", "2. 따뜻하고 친근한 인상", "3. 지적이고 세련된 인상", "4. 신비롭고 몽환적인 인상"]
-    }}
-  ]
-}}"""
-
-
-def get_DE_identity_prompt(
-    brand_info: dict[str, Any],
-    data_c: dict[str, Any],
-    previous_context: str,
-    interview_data_de: str,
-) -> str:
-    return f"""브랜드의 로고와 캐릭터 가이드를 동시에 설계하세요.
-
-[확정된 최종 브랜드 조합]
-{brand_info}
-
-[비주얼 시스템 데이터]
-{data_c}
-
-[지금까지 확정된 브랜드 전략]
-{previous_context}
-
-[로고·캐릭터 인터뷰 결과]
-{interview_data_de}
-
-아래 JSON 형식에 맞추어 응답을 생성하세요:
-
-{{
-  "logo_identity": {{
-    "concept": {{
-      "symbol_reason": "심볼 선정 이유",
-      "color_reason": "컬러 선정 이유",
-      "overall_message": "로고가 전달해야 할 전체 메시지",
-      "direction_text": "이미지 생성용 디렉션 텍스트"
-    }},
-    "guide": {{
-      "minimum_size": "최소 사용 크기",
-      "clear_space": "클리어 스페이스 규정"
-    }}
-  }},
-  "character_guide": {{
-    "intro": {{
-      "name": "캐릭터 이름",
-      "appearance": "캐릭터 외형 묘사",
-      "symbolic_value": "상징 가치"
-    }},
-    "reasoning": {{
-      "selection_reason": "캐릭터 선택 이유",
-      "emotional_connection": "감정적 연결 포인트"
-    }},
-    "story": {{
-      "background": "캐릭터 배경 스토리",
-      "brand_role": "브랜드 내 역할"
-    }}
-  }}
-}}"""

@@ -1,6 +1,8 @@
 # NameTag 백엔드 — Copilot 완전 재현 명령어
 # 구현 스택: FastAPI (Python) + React 프론트엔드 + REST API
 
+> 상태 안내: 이 문서는 V1 섹션형 서비스의 초기 구현 가이드입니다. 현재 웹 앱의 기본 생성 화면은 V2 보고서 흐름을 사용합니다. 최신 실행·API 안내는 `README.md`와 `docs/REPORT_V2_INTEGRATION.md`를 참고하세요.
+
 > 이 문서는 기존 코드베이스(`brand_director.py`, `nametag_prompts.py`, `nametag_pdf_builder.py`)의 로직을
 > **FastAPI REST API 서버 + React 프론트엔드**로 완전히 재현하기 위한 단계별 명령어입니다.
 > 노트북 코드는 참고용이며, 실제 구현 타겟은 웹 서비스입니다.

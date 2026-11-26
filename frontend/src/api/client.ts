@@ -32,17 +32,18 @@ async function apiPost(endpoint: string, body: unknown) {
       const payload = await response.json().catch(() => ({}));
       apiLogger.error(`${safeEndpoint} - Status ${response.status}`, payload);
       
-      // 💡 [수정 1] FastAPI 배열 에러(422) 완벽 파싱 로직
-      let errorMessage = "서버 오류가 발생했습니다.";
+      // Show the server's validation detail together with status and endpoint.
+      let detailMessage = "서버가 상세 오류 내용을 반환하지 않았습니다.";
       if (payload.detail) {
         if (typeof payload.detail === "string") {
-          errorMessage = payload.detail;
+          detailMessage = payload.detail;
         } else if (Array.isArray(payload.detail)) {
-          // 배열 형태의 상세 에러를 읽기 쉽게 변환 (예: "brand_info.brand_name : 필드가 누락되었습니다")
-          errorMessage = payload.detail.map((err: any) => `${err.loc?.join('.')} : ${err.msg}`).join('\n');
+          detailMessage = payload.detail.map((err: any) => `${err.loc?.join(".") || "요청"}: ${err.msg || JSON.stringify(err)}`).join("\n");
+        } else {
+          detailMessage = JSON.stringify(payload.detail);
         }
       }
-      throw new Error(errorMessage);
+      throw new Error(`HTTP ${response.status} · ${safeEndpoint}\n${detailMessage}`);
     }
 
     const data = await response.json();
@@ -95,9 +96,9 @@ export const regenerateSectionDEField = (brandInfo: unknown, context: unknown, t
   return apiPost("/section-de/re-generate", { brand_info: brandInfo, context, target });
 };
 
-export const regenerateSectionOField = (brandInfo: unknown, context: unknown, target: string) => {
-  apiLogger.info("🎯 Section O Re-generate field", { brandName: (brandInfo as any)?.brand_name, target });
-  return apiPost("/section-o/re-generate", { brand_data: brandInfo, context, target });
+export const regenerateSectionOField = (brandData: unknown, context: unknown, target: string) => {
+  apiLogger.info("🎯 Section O Re-generate field", { brandName: (brandData as any)?.brand_name, target });
+  return apiPost("/section-o/re-generate", { brand_data: brandData, context, target });
 };
 
 export const getBInterview = (brandInfo: unknown) => {
@@ -133,6 +134,56 @@ export const getDEInterview = (brandInfo: unknown, interviewDataC: string) => {
   apiLogger.info("🎯 Section DE Interview 시작", { brandName: (brandInfo as any)?.brand_name, interviewC: interviewDataC.length });
   return apiPost("/section-de/interview", { brand_info: brandInfo, interview_data_c: interviewDataC });
 };
+
+export type ReportV2Page = {
+  page_id: string;
+  title: string;
+  status: string;
+  data: Record<string, unknown>;
+  evidence_type?: string;
+  source_ids?: string[];
+  confidence?: string;
+  validation_notes?: string[];
+};
+
+export const getReportV2Meta = () => fetch(`${BASE_URL}/report-v2/meta`).then(async (response) => {
+  if (!response.ok) throw new Error("보고서 정보를 불러오지 못했습니다.");
+  return response.json();
+});
+
+export const getReportV2Plan = (payload: unknown) => apiPost("/report-v2/plan", payload);
+
+export const generateReportV2Interview = (interviewId: string, context: unknown) =>
+  apiPost(`/report-v2/interviews/${encodeURIComponent(interviewId)}`, { context });
+
+export const generateReportV2Page = (pageId: string, payload: unknown) =>
+  apiPost(`/report-v2/pages/${encodeURIComponent(pageId)}`, payload);
+
+export async function downloadReportV2Pdf(
+  pages: Record<string, ReportV2Page>,
+  brandName: string,
+) {
+  const blob = await createReportV2PdfBlob(pages, brandName);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `nametag_${brandName}_report.pdf`;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function createReportV2PdfBlob(
+  pages: Record<string, ReportV2Page>,
+  brandName: string,
+): Promise<Blob> {
+  const response = await fetch(`${BASE_URL}/pdf/generate-v2`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pages, brand_name: brandName }),
+  });
+  if (!response.ok) throw new Error((await response.text()) || "PDF 생성에 실패했습니다.");
+  return response.blob();
+}
 
 export const generateSectionDE = (
   brandInfo: unknown,
