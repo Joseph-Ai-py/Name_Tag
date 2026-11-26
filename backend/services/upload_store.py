@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -33,14 +33,14 @@ def get_connection():
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
     try:
-                yield connection
+        yield connection
     finally:
-                connection.close()
+        connection.close()
 
 
 def save_upload(filename: str, path: str) -> int:
     initialize_upload_db()
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(timezone.utc).isoformat()
     with get_connection() as connection:
         cursor = connection.execute(
             "INSERT INTO uploads (filename, path, created_at) VALUES (?, ?, ?)",

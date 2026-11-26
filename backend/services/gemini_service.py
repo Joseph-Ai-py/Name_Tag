@@ -5,6 +5,7 @@ import os
 import re
 import base64
 import time
+from pathlib import Path
 from typing import Any, Type
 
 from dotenv import load_dotenv
@@ -12,9 +13,9 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from prompts.nametag_prompts import SYSTEM_PROMPT
+from backend.prompts.nametag_prompts import SYSTEM_PROMPT
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / "backend" / ".env")
 
 TEXT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview").strip() or "gemini-3-flash-preview"
 IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview").strip() or "gemini-3.1-flash-image-preview"
@@ -23,40 +24,42 @@ GEMINI_IMAGE_API_KEY = os.getenv("GEMINI_IMAGE_API_KEY", "").strip()
 
 
 def parse_ai_response(raw_text: str) -> dict[str, Any]:
-    # Remove markdown code blocks if present
-    cleaned = re.sub(r"```(?:json)?\n?", "", raw_text)
-    cleaned = re.sub(r"```\n?", "", cleaned)
-
-    # Extract first complete JSON object
-    match = re.search(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", cleaned)
-    if not match:
-        raise ValueError(f"AI 응답에서 JSON을 찾을 수 없습니다: {raw_text[:200]}")
-
-    json_str = match.group()
+    cleaned = re.sub(r"```(?:json)?\s*", "", raw_text, flags=re.IGNORECASE).replace("```", "").strip()
     try:
-        return json.loads(json_str)
-    except json.JSONDecodeError as e:
-        # If basic parsing fails, try to extract from first { to first complete }
-        try:
-            start = cleaned.find('{')
-            if start == -1:
-                raise ValueError("JSON 시작 문자를 찾을 수 없습니다")
-            # Find matching closing brace
-            depth = 0
-            end = -1
-            for i in range(start, len(cleaned)):
-                if cleaned[i] == '{':
-                    depth += 1
-                elif cleaned[i] == '}':
-                    depth -= 1
-                    if depth == 0:
-                        end = i + 1
-                        break
-            if end == -1:
-                raise ValueError("일치하는 closing brace를 찾을 수 없습니다")
-            return json.loads(cleaned[start:end])
-        except Exception as inner_e:
-            raise ValueError(f"JSON 파싱 실패: {str(e)} / {str(inner_e)}")
+        payload = json.loads(cleaned)
+        if not isinstance(payload, dict):
+            raise ValueError("AI 응답 JSON의 최상위 값은 객체여야 합니다.")
+        return payload
+    except json.JSONDecodeError:
+        # Find one complete object while respecting quoted braces and escapes.
+        start = cleaned.find("{")
+        if start < 0:
+            raise ValueError(f"AI 응답에서 JSON 객체를 찾을 수 없습니다: {raw_text[:200]}")
+        depth = 0
+        in_string = False
+        escaped = False
+        for index in range(start, len(cleaned)):
+            char = cleaned[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    payload = json.loads(cleaned[start:index + 1])
+                    if not isinstance(payload, dict):
+                        raise ValueError("AI 응답 JSON의 최상위 값은 객체여야 합니다.")
+                    return payload
+        raise ValueError("AI 응답 JSON 객체가 닫히지 않았습니다.")
 
 
 def _is_retryable(error_text: str) -> bool:
@@ -65,7 +68,13 @@ def _is_retryable(error_text: str) -> bool:
 
 # -----------------------------------------------------------------------------
 # Pydantic 스키마를 강제하여 완벽한 JSON을 받아내는 함수
-def request_gemini_with_schema(prompt: str, schema: Type[BaseModel], max_retries: int = 6) -> dict[str, Any]:
+def request_gemini_with_schema(
+    prompt: str,
+    schema: Type[BaseModel],
+    max_retries: int = 6,
+    *,
+    system_instruction: str | None = None,
+) -> dict[str, Any]:
     """
     AI에게 Pydantic 스키마(도면)를 전달하여, 무조건 해당 형태의 JSON만 반환하도록 강제합니다.
     - 데이터 누락 및 껍질 파괴(Flattening) 원천 차단
@@ -77,7 +86,7 @@ def request_gemini_with_schema(prompt: str, schema: Type[BaseModel], max_retries
     
     # 스키마 강제 설정 (JSON 강제 + Pydantic 도면 주입)
     config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_PROMPT,
+        system_instruction=system_instruction or SYSTEM_PROMPT,
         temperature=1.0,
         response_mime_type="application/json",
         response_schema=schema,
@@ -93,10 +102,23 @@ def request_gemini_with_schema(prompt: str, schema: Type[BaseModel], max_retries
             )
             
             # API가 스키마에 맞춘 완벽한 JSON 문자열을 보장하므로, 정규식 파싱(parse_ai_response) 없이 바로 변환
-            if response.text:
-                return json.loads(response.text)
+            response_text = response.text
+            if response_text:
+                payload = json.loads(response_text)
+            elif getattr(response, "parsed", None) is not None:
+                parsed = response.parsed
+                if isinstance(parsed, BaseModel):
+                    payload = parsed.model_dump(mode="json")
+                elif isinstance(parsed, dict):
+                    payload = parsed
+                else:
+                    raise TypeError("Gemini parsed response must be a Pydantic model or dict")
             else:
                 raise ValueError("AI가 빈 응답을 반환했습니다.")
+
+            # Validate the provider output locally too; this gives callers one stable dict contract.
+            validated = schema.model_validate(payload)
+            return validated.model_dump(mode="json")
 
         except Exception as exc:
             error_text = str(exc)
@@ -107,7 +129,13 @@ def request_gemini_with_schema(prompt: str, schema: Type[BaseModel], max_retries
             raise
 
 
-def request_gemini_text(prompt: str, max_retries: int = 10) -> dict[str, Any]:
+def request_gemini_text(
+    prompt: str,
+    max_retries: int = 10,
+    *,
+    system_instruction: str | None = None,
+    timeout_seconds: float = 600,
+) -> dict[str, Any]:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY가 설정되지 않았습니다.")
 
@@ -126,8 +154,9 @@ def request_gemini_text(prompt: str, max_retries: int = 10) -> dict[str, Any]:
             interaction = client.interactions.create(
                 model=TEXT_MODEL,
                 input=prompt,
-                system_instruction=SYSTEM_PROMPT,
+                system_instruction=system_instruction or SYSTEM_PROMPT,
                 generation_config=generation_config,
+                timeout=timeout_seconds,
             )
             return parse_ai_response(interaction.output_text or "")
 

@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
 from pathlib import Path
+import re
 from typing import Any
 
-from services.gemini_service import request_gemini_image
-from prompts.nametag_prompts import get_logo_image_prompt, get_character_image_prompt
+from backend.services.gemini_service import request_gemini_image
+from backend.prompts.nametag_prompts import get_logo_image_prompt, get_character_image_prompt
 
-ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
+ASSETS_DIR = Path(
+    os.environ.get("NAME_TAG_ASSETS_DIR", str(Path(__file__).resolve().parents[1] / "assets"))
+).expanduser().resolve()
 
 
 def _save_image(image_data: bytes, subdir: str, filename_prefix: str, brand_name: str) -> str:
     target_dir = ASSETS_DIR / subdir
     target_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe_brand_name = brand_name.replace(" ", "_")
+    safe_brand_name = re.sub(r"[^A-Za-z0-9가-힣_-]+", "_", brand_name).strip("._") or "brand"
     file_path = target_dir / f"{filename_prefix}_{safe_brand_name}_{timestamp}.png"
     file_path.write_bytes(image_data)
     print(f"[DEBUG] image saved: {file_path.resolve()}")

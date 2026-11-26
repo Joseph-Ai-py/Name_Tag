@@ -17,7 +17,16 @@ BACKEND_DIR = ROOT_DIR / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.append(str(BACKEND_DIR))
 
-from backend.routers import section_a, section_b, section_c, section_de, section_o
+load_dotenv(ROOT_DIR / "backend" / ".env")
+
+from backend.routers import (
+    legacy_brand_identity_router,
+    legacy_customer_strategy_router,
+    legacy_logo_character_router,
+    legacy_naming_router,
+    legacy_visual_identity_router,
+    report_v2,
+)
 
 pdf_router = None
 try:
@@ -26,8 +35,6 @@ try:
     pdf_router = pdf_module.router
 except Exception as exc:
     print(f"[WARN] PDF router disabled: {exc}")
-
-load_dotenv()
 
 app = FastAPI(title="NameTag API")
 
@@ -39,11 +46,13 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-app.include_router(section_o.router, prefix="/api/section-o")
-app.include_router(section_a.router, prefix="/api/section-a")
-app.include_router(section_b.router, prefix="/api/section-b")
-app.include_router(section_c.router, prefix="/api/section-c")
-app.include_router(section_de.router, prefix="/api/section-de")
+# The web app's active generation flow is the V2 page-based report API.
+app.include_router(report_v2.router, prefix="/api/report-v2", tags=["Brand and Business Report"])
+app.include_router(legacy_naming_router.router, prefix="/api/section-o", tags=["Brand Naming"])
+app.include_router(legacy_brand_identity_router.router, prefix="/api/section-a", tags=["Brand Foundation"])
+app.include_router(legacy_customer_strategy_router.router, prefix="/api/section-b", tags=["Customer Strategy"])
+app.include_router(legacy_visual_identity_router.router, prefix="/api/section-c", tags=["Visual Identity"])
+app.include_router(legacy_logo_character_router.router, prefix="/api/section-de", tags=["Logo and Character Identity"])
 try:
     from backend.routers import uploads as uploads_module
     app.include_router(uploads_module.router, prefix="/api/uploads")

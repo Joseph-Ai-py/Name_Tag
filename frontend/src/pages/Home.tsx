@@ -56,9 +56,9 @@ export function Home() {
           </button>
 
           <p className="mx-auto max-w-3xl text-lg leading-8 text-light-text/70 dark:text-dark-text/70 md:text-xl">
-            브랜드 이름, 스토리, 비주얼, 로고와 캐릭터까지 하나의 흐름으로 만들 수 있게 정리했습니다.
+            브랜드 전략부터 고객·시장 분석, 사업 모델, 시각적 정체성까지 연결된 보고서를 만듭니다.
             <br />
-            과거 프론트엔드의 진입 경험을 그대로 살리면서 현재 섹션형 API 흐름에 맞춰 연결합니다.
+            인터뷰부터 실행 계획까지 단계별로 정리해 바로 검토할 수 있는 PDF로 완성합니다.
           </p>
         </section>
 
@@ -67,11 +67,11 @@ export function Home() {
             to="/generate"
             className="btn-primary inline-flex items-center gap-2 px-8 py-4 text-lg shadow-glow hover:shadow-glow-cyan"
           >
-            생성 시작하기
+            섹션별 브랜드 가이드 시작하기
             <ArrowRight size={20} />
           </Link>
           <p className="text-sm font-medium text-light-text/60 dark:text-dark-text/60">
-            NameTag — AI 기반 브랜드 정체성 생성기: 섹션별 질문으로 브랜드 네임·스토리·비주얼을 만들고 PDF 가이드라인으로 제공합니다.
+            단계별 인터뷰와 검토를 거쳐 브랜드·사업 전략 보고서를 PDF로 제공합니다.
           </p>
         </section>
 
@@ -119,7 +119,7 @@ export function Home() {
             <div>
               <h3 className="mb-1 font-semibold">AI 기반 맞춤형 브랜드 생성</h3>
               <p className="text-sm leading-7 text-light-text/70 dark:text-dark-text/70">
-                Google Gemini와 현재 백엔드 섹션 API를 연결해 브랜드 정체성을 만들고 PDF로 정리합니다.
+                브랜드 입력부터 고객·시장 분석과 시각 정체성까지 한 흐름에서 이어지는 보고서를 만듭니다.
               </p>
             </div>
           </div>

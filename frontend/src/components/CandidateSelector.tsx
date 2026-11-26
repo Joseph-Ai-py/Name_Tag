@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Candidate = {
   id: number;
@@ -26,11 +26,21 @@ export function CandidateSelector({ candidates, onComplete }: Props) {
     story: null,
     color: null,
   });
+  const completedSelection = useRef("");
+  const candidateKey = JSON.stringify(candidates);
+
+  useEffect(() => {
+    setSelected({ name: null, meaning: null, slogan: null, story: null, color: null });
+    completedSelection.current = "";
+  }, [candidateKey]);
 
   useEffect(() => {
     if (candidates.length !== 4) return;
     const { name, meaning, slogan, story, color } = selected;
     if ([name, meaning, slogan, story, color].every((value) => value !== null)) {
+      const selectionKey = `${candidateKey}:${name}-${meaning}-${slogan}-${story}-${color}`;
+      if (completedSelection.current === selectionKey) return;
+      completedSelection.current = selectionKey;
       onComplete({
         brand_name: candidates[name!].brand_name,
         brand_name_en: candidates[name!].brand_name_en,
@@ -41,7 +51,7 @@ export function CandidateSelector({ candidates, onComplete }: Props) {
         seed_color_reason: candidates[color!].seed_color_reason,
       });
     }
-  }, [candidates, onComplete, selected]);
+  }, [candidateKey, candidates, onComplete, selected]);
 
   if (!candidates.length) {
     return null;
@@ -62,12 +72,16 @@ export function CandidateSelector({ candidates, onComplete }: Props) {
       render: (candidate: Candidate) => `${candidate.seed_color} · ${candidate.seed_color_reason}`,
     },
   ] as const;
+  const selectedCount = Object.values(selected).filter((value) => value !== null).length;
 
   return (
     <div className="space-y-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.06)] md:p-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-stone-500">Candidate Mix & Match</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-stone-500">BRAND DIRECTION</p>
         <h3 className="mt-2 text-2xl font-black text-stone-900">브랜드 후보를 조합해 확정하세요</h3>
+        <p role="status" className="mt-2 text-sm text-stone-600" aria-live="polite">
+          {selectedCount} / {panels.length}개 선택 완료 · 각 항목에서 하나씩 선택하면 조합이 확정됩니다.
+        </p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -85,6 +99,7 @@ export function CandidateSelector({ candidates, onComplete }: Props) {
                   <button
                     key={`${panel.key}-${candidate.id}`}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setSelected((value) => ({ ...value, [panel.key]: index }))}
                     className={`w-full rounded-2xl border px-4 py-3 text-left text-sm leading-6 transition ${
                       active

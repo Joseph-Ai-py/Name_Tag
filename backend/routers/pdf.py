@@ -7,7 +7,10 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from pdf.nametag_pdf_builder import assemble_html
+from backend.pdf.nametag_pdf_builder import assemble_html
+from backend.pdf.report_v2_pdf import build_report_v2_compact_html, build_report_v2_html
+from backend.prompts.nametag_prompts_v2 import apply_backend_calculations, validate_page_result
+from backend.schemas.report_v2 import ReportV2PdfRequest
 
 router = APIRouter()
 
@@ -79,3 +82,54 @@ async def generate_pdf(req: PdfRequest):
     except Exception as exc:
         print(f"[DEBUG] PDF 생성 오류: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/generate-v2")
+async def generate_v2_pdf(req: ReportV2PdfRequest):
+    try:
+        from weasyprint import HTML
+    except (ImportError, OSError) as exc:
+        raise HTTPException(status_code=500, detail="PDF 생성을 위해 WeasyPrint와 시스템 라이브러리가 필요합니다.") from exc
+    try:
+        pages = {page_id: page.model_dump(mode="json") for page_id, page in req.pages.items()}
+        for page_id, page in pages.items():
+            apply_backend_calculations(page_id, page)
+        for page_id, page in pages.items():
+            errors = validate_page_result(page_id, page, pages)
+            if errors:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"page_id": page_id, "contract_errors": errors},
+                )
+        layouts = [layout.model_dump(mode="json") for layout in req.page_layouts]
+        html_content = (
+            build_report_v2_compact_html(pages)
+            if len(pages) >= 20
+            else build_report_v2_html(pages, layouts)
+        )
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        HTML(string=html_content).write_pdf(tmp.name)
+        tmp.close()
+
+        def file_iterator(path: str, chunk_size: int = 4096):
+            try:
+                with open(path, "rb") as file:
+                    while chunk := file.read(chunk_size):
+                        yield chunk
+            finally:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+
+        from urllib.parse import quote
+        filename = quote(f"nametag_{req.brand_name}_V2_report.pdf")
+        return StreamingResponse(
+            file_iterator(tmp.name),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename*=utf-8''{filename}"},
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"V2 PDF 생성 실패: {exc}") from exc
