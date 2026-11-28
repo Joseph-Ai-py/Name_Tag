@@ -53,3 +53,11 @@ npm run build
 ```
 
 See [V2 integration notes](docs/REPORT_V2_INTEGRATION.md) for the request payloads, page dependency flow, and PDF layout mapping.
+
+## Portfolio and verification status
+
+- **Purpose:** AI brand strategy report generation
+- **Stack:** FastAPI, React, Gemini, PDF
+- **Reproduction / QA:** Run from root: `python -m pytest backend/tests`; from `frontend/`: `npm test -- --run` and `npm run build`. API-dependent generation and visual PDF QA require separate credentials and manual checks.
+- **Maintenance / licensing:** [Experiments](experiments/README.md) contains historical prototypes. [Workspace research implementation](https://github.com/Joseph-Ai-py/Name_Tag_V2) remains a separate codebase pending integration. No repository-level license verified.
+- **Verification status (2026-11-28):** repository structure reviewed; runtime and deployment acceptance are not certified by this documentation update.
